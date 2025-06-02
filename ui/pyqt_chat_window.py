@@ -415,7 +415,7 @@ class ChatWindow(QWidget):
         h = int(doc.size().height())+10
         s.input.setFixedHeight(min(max(48, h), 120))
         s.input_wrap.setFixedHeight(s.input.height())
-        s.resizeEvent(None)
+
     def eventFilter(s, obj, event):
         if obj is s.input and event.type()==6:
             if event.key()==Qt.Key_Return and not (event.modifiers()&Qt.ShiftModifier):
