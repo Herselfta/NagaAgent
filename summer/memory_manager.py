@@ -302,6 +302,15 @@ class MemoryManager:
             self._decay_weights()
             self._adjust_counter = 0
 
+    def fuzzy_recall(self, query, k=5):
+        """模糊召回方法，兼容conversation_core.py的调用"""
+        try:
+            # 使用faiss_fuzzy_recall进行模糊搜索
+            return faiss_fuzzy_recall(query, k)
+        except Exception as e:
+            # 降级到普通召回
+            return self.recall_memory(query, k)
+
     def _is_core(self, chunk):
         # 可扩展LLM/规则判定核心记忆
         return chunk.get('level') == 'core' or '身份' in chunk.get('text','')

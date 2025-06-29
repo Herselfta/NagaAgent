@@ -1,0 +1,48 @@
+This is BibTeX, Version 0.99d (TeX Live 2025)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: nagaagent-aaai2026.aux
+The style file: aaai2026.bst
+Database file #1: references.bib
+Warning--can't use both volume and number fields in besta2024graph
+You've used 8 entries,
+            2840 wiz_defined-function locations,
+            631 strings with 6603 characters,
+and the built_in function-call counts, 6892 in all, are:
+= -- 503
+> -- 501
+< -- 1
++ -- 186
+- -- 179
+* -- 527
+:= -- 1150
+add.period$ -- 31
+call.type$ -- 8
+change.case$ -- 92
+chr.to.int$ -- 9
+cite$ -- 9
+duplicate$ -- 420
+empty$ -- 380
+format.name$ -- 199
+if$ -- 1309
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 103
+newline$ -- 43
+num.names$ -- 32
+pop$ -- 219
+preamble$ -- 1
+purify$ -- 86
+quote$ -- 0
+skip$ -- 212
+stack$ -- 0
+substring$ -- 233
+swap$ -- 237
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 72
+warning$ -- 1
+while$ -- 43
+width$ -- 0
+write$ -- 103
+(There was 1 warning)

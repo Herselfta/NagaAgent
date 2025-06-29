@@ -33,7 +33,7 @@ def extract_message(response: str) -> str:
     except:
         pass
     
-    return response
+        return response
 
 def _recursive_extract(data) -> str:
     """递归提取消息内容"""

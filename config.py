@@ -66,7 +66,7 @@ HNSW_M = 48 # HNSW参数
 PQ_M = 16 # PQ分段数
 
 # API与服务配置
-DEEPSEEK_API_KEY = ' '
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-placeholder-key-not-set")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
@@ -96,7 +96,7 @@ API_SERVER_AUTO_START = True  # 启动时自动启动API服务器
 API_SERVER_DOCS_ENABLED = True  # 是否启用API文档
 
 # 对话与检索参数
-MAX_HISTORY_ROUNDS = 10 # 最大历史轮数
+MAX_HISTORY_ROUNDS = 19
 TEMPERATURE = 0.7 # 温度参数
 MAX_TOKENS = 2000 # 最大token数
 STREAM_MODE = True # 是否流式响应
@@ -238,3 +238,143 @@ CORE_MEMORY_SIZE = 100 # 核心记忆容量
 ARCHIVAL_MEMORY_SIZE = 500 # 归档记忆容量
 LONG_TERM_MEMORY_SIZE = 5000 # 长期记忆容量
 SHORT_TERM_MEMORY_SIZE = 50 # 短期记忆容量
+
+# 快速响应小模型配置
+# 用于快速决策和JSON格式化的轻量级模型
+QUICK_MODEL_ENABLED = os.getenv("QUICK_MODEL_ENABLED", "false").lower() == "true"
+QUICK_MODEL_API_KEY = os.getenv("QUICK_MODEL_API_KEY", "")  # 小模型API密钥
+QUICK_MODEL_BASE_URL = os.getenv("QUICK_MODEL_BASE_URL", "")  # 小模型API地址
+QUICK_MODEL_NAME = os.getenv("QUICK_MODEL_NAME", "qwen2.5-1.5b-instruct")  # 小模型名称
+
+# 小模型参数配置
+QUICK_MODEL_CONFIG = {
+    "enabled": QUICK_MODEL_ENABLED,
+    "api_key": QUICK_MODEL_API_KEY,
+    "base_url": QUICK_MODEL_BASE_URL,
+    "model_name": QUICK_MODEL_NAME,
+    "max_tokens": 512,  # 小模型输出限制
+    "temperature": 0.05,  # 极低温度确保稳定一致的输出
+    "timeout": 5,  # 快速响应超时时间
+    "max_retries": 2,  # 最大重试次数
+    
+    # 功能配置
+    "quick_decision_enabled": True,  # 快速决策功能
+    "json_format_enabled": True,    # JSON格式化功能
+    "output_filter_enabled": True,  # 输出内容过滤功能
+    "difficulty_judgment_enabled": True,  # 问题难度判断功能
+    "scoring_system_enabled": True,  # 黑白名单打分系统
+    "thinking_completeness_enabled": True,  # 思考完整性判断功能
+}
+
+# 输出过滤配置
+OUTPUT_FILTER_CONFIG = {
+    "filter_think_tags": True,  # 过滤<think></think>标签内容
+    "filter_patterns": [
+        r'<think>.*?</think>',  # 思考标签
+        r'<thinking>.*?</thinking>',  # 思考标签
+        r'<reflection>.*?</reflection>',  # 反思标签
+        r'<internal>.*?</internal>',  # 内部思考标签
+    ],
+    "clean_output": True,  # 清理多余空白字符
+}
+
+# 问题难度判断配置
+DIFFICULTY_JUDGMENT_CONFIG = {
+    "enabled": True,
+    "use_small_model": True,  # 使用小模型进行难度判断
+    "difficulty_levels": ["简单", "中等", "困难", "极难"],
+    "factors": [
+        "概念复杂度",
+        "推理深度", 
+        "知识广度",
+        "计算复杂度",
+        "创新要求"
+    ],
+    "threshold_simple": 2,    # 简单问题阈值
+    "threshold_medium": 4,    # 中等问题阈值
+    "threshold_hard": 6,      # 困难问题阈值
+}
+
+# 黑白名单打分系统配置
+SCORING_SYSTEM_CONFIG = {
+    "enabled": True,
+    "score_range": [1, 5],  # 评分范围：1-5分
+    "score_threshold": 2,   # 结果保留阈值：2分及以下不保留
+    "similarity_threshold": 0.85,  # 相似结果识别阈值
+    "max_user_preferences": 3,  # 用户最多选择3个偏好
+    "default_preferences": [
+        "逻辑清晰准确",
+        "实用性强", 
+        "创新思维"
+    ],
+    "penalty_for_similar": 1,  # 相似结果的惩罚分数
+    "min_results_required": 2,  # 最少保留结果数量（即使低于阈值）
+    "strict_filtering": True,  # 严格过滤模式：True时严格按阈值过滤，False时保证最少结果数量
+}
+
+# 思考完整性判断配置
+THINKING_COMPLETENESS_CONFIG = {
+    "enabled": True,
+    "use_small_model": True,  # 使用小模型判断思考完整性
+    "completeness_criteria": [
+        "问题分析充分",
+        "解决方案明确",
+        "逻辑链条完整",
+        "结论清晰合理"
+    ],
+    "completeness_threshold": 0.8,  # 完整性阈值（0-1）
+    "max_thinking_depth": 5,  # 最大思考深度层级
+    "next_question_generation": True,  # 生成下一级问题
+}
+
+# 快速决策系统提示词
+QUICK_DECISION_SYSTEM_PROMPT = """你是一个快速决策助手，专门进行简单判断和分类任务。
+请根据用户输入快速给出准确的判断结果，保持简洁明确。
+不需要详细解释，只需要给出核心判断结果。
+【重要】：只输出最终结果，不要包含思考过程或<think>标签。"""
+
+# JSON格式化系统提示词  
+JSON_FORMAT_SYSTEM_PROMPT = """你是一个JSON格式化助手，专门将文本内容转换为结构化JSON格式。
+请严格按照要求的JSON格式输出，确保语法正确且结构清晰。
+只输出JSON内容，不要包含任何其他文字说明。
+【重要】：只输出最终JSON，不要包含思考过程或<think>标签。"""
+
+# 问题难度判断系统提示词
+DIFFICULTY_JUDGMENT_SYSTEM_PROMPT = """你是一个问题难度评估专家，专门分析问题的复杂程度。
+请根据问题的概念复杂度、推理深度、知识广度、计算复杂度、创新要求等因素进行评估。
+只输出难度等级：简单、中等、困难、极难 中的一个。
+【重要】：只输出难度等级，不要包含思考过程或解释。"""
+
+# 结果打分系统提示词
+RESULT_SCORING_SYSTEM_PROMPT = """你是一个结果评分专家，根据用户偏好和思考质量对结果进行1-5分评分。
+评分标准：
+- 5分：完全符合用户偏好，质量极高
+- 4分：很好符合偏好，质量良好  
+- 3分：基本符合偏好，质量一般
+- 2分：部分符合偏好，质量较差
+- 1分：不符合偏好或质量很差
+
+请根据提供的思考结果和用户偏好进行评分。
+【重要】：只输出数字分数，不要包含思考过程或解释。"""
+
+# 思考完整性判断系统提示词
+THINKING_COMPLETENESS_SYSTEM_PROMPT = """你是一个思考完整性评估专家，判断当前思考是否已经相对完整。
+评估标准：
+- 问题分析是否充分
+- 解决方案是否明确
+- 逻辑链条是否完整
+- 结论是否清晰合理
+
+如果思考完整，输出：完整
+如果需要进一步思考，输出：不完整
+【重要】：只输出"完整"或"不完整"，不要包含思考过程或解释。"""
+
+# 下一级问题生成系统提示词
+NEXT_QUESTION_SYSTEM_PROMPT = """你是一个问题设计专家，根据当前不完整的思考结果，设计下一级需要深入思考的核心问题。
+要求：
+- 问题应该针对当前思考的不足之处
+- 问题应该能推进整体思考进程
+- 问题应该具体明确，易于思考
+
+请设计一个简洁的核心问题。
+【重要】：只输出问题本身，不要包含思考过程或解释。"""

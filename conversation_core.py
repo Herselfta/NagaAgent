@@ -13,6 +13,7 @@ from voice.voice_handler import VoiceHandler # 语音处理
 import time # 时间戳打印
 from summer.memory_manager import MemoryManager  # 新增
 from mcpserver.mcp_registry import register_all_handoffs # 导入批量注册方法
+from quick_model_manager import QuickModelManager  # 新增
 now=lambda:time.strftime('%H:%M:%S:')+str(int(time.time()*1000)%10000) # 当前时间
 _builtin_print=print
 print=lambda *a,**k:sys.stderr.write('[print] '+(' '.join(map(str,a)))+'\n')
@@ -39,6 +40,23 @@ class NagaConversation: # 对话主类
   s.async_client=AsyncOpenAI(api_key=DEEPSEEK_API_KEY,base_url=DEEPSEEK_BASE_URL.rstrip('/')+'/')
   s.memory = MemoryManager()  # 新增：初始化记忆管理器
   s.compat_mode = False # 新增：兼容升级模式状态
+  
+  # 新增：快速模型管理器
+  try:
+    s.quick_model = QuickModelManager()
+    logger.info("快速模型管理器初始化成功")
+  except Exception as e:
+    logger.warning(f"快速模型管理器初始化失败: {e}")
+    s.quick_model = None
+  
+  # 新增：树状思考系统
+  try:
+    from thinking import TreeThinkingEngine
+    s.tree_thinking = TreeThinkingEngine(api_client=s, memory_manager=s.memory)
+    logger.info("树状外置思考系统初始化成功")
+  except Exception as e:
+    logger.warning(f"树状思考系统初始化失败: {e}")
+    s.tree_thinking = None
   
   # 新增：性格系统
   s.current_personality = "DEFAULT"  # 当前性格代码
@@ -110,6 +128,134 @@ class NagaConversation: # 对话主类
    if u.strip()=="#devmode":
     s.dev_mode=True
     yield ("娜迦","已进入开发者模式，后续对话不写入向量库");return
+   
+   # 树状思考系统控制指令
+   if u.strip().startswith("#tree"):
+    if s.tree_thinking is None:
+      yield ("娜迦", "树状思考系统未初始化，无法使用该功能");return
+    
+    command = u.strip().split()
+    if len(command) == 2:
+      if command[1] == "on":
+        s.tree_thinking.enable_tree_thinking(True)
+        yield ("娜迦", "🌳 树状外置思考系统已启用");return
+      elif command[1] == "off":
+        s.tree_thinking.enable_tree_thinking(False)
+        yield ("娜迦", "树状思考系统已禁用，恢复普通对话模式");return
+      elif command[1] == "status":
+        status = s.tree_thinking.get_system_status()
+        enabled_status = "启用" if status["enabled"] else "禁用"
+        yield ("娜迦", f"🌳 树状思考系统状态：{enabled_status}\n当前会话：{status['current_session']}\n历史会话数：{status['total_sessions']}");return
+    
+    yield ("娜迦", "用法：#tree on/off/status");return
+   
+   # 快速模型系统控制指令
+   if u.strip().startswith("#quick"):
+    command_parts = u.strip().split()
+    
+    if len(command_parts) == 1:
+      yield ("娜迦", "快速模型命令用法：\n#quick status - 查看状态\n#quick config <api_key> <base_url> [model_name] - 配置模型\n#quick test - 测试功能\n#quick enable/disable - 启用/禁用");return
+    
+    cmd = command_parts[1]
+    
+    if cmd == "status":
+      if s.quick_model:
+        stats = s.quick_model.get_stats()
+        status_msg = f"⚡ 快速模型状态：\n"
+        status_msg += f"• 启用状态：{'✅ 已启用' if stats['enabled'] else '❌ 未启用'}\n"
+        status_msg += f"• 模型名称：{stats['model_name']}\n"
+        status_msg += f"• 总调用次数：{stats['total_calls']}\n"
+        status_msg += f"• 快速模型成功率：{stats['quick_success_rate']}\n"
+        status_msg += f"• 快速模型使用率：{stats['quick_usage_rate']}\n"
+        status_msg += f"• 节省时间：{stats['total_time_saved']}"
+        yield ("娜迦", status_msg);return
+      else:
+        yield ("娜迦", "快速模型管理器未初始化");return
+    
+    elif cmd == "config":
+      if len(command_parts) < 4:
+        yield ("娜迦", "配置格式：#quick config <api_key> <base_url> [model_name]");return
+      
+      api_key = command_parts[2]
+      base_url = command_parts[3]
+      model_name = command_parts[4] if len(command_parts) > 4 else "qwen2.5-1.5b-instruct"
+      
+      if s.quick_model:
+        new_config = {
+          "enabled": True,
+          "api_key": api_key,
+          "base_url": base_url,
+          "model_name": model_name
+        }
+        
+        if s.quick_model.update_config(new_config):
+          yield ("娜迦", f"⚡ 快速模型配置更新成功！\n• API密钥：{api_key[:8]}...\n• 地址：{base_url}\n• 模型：{model_name}");return
+        else:
+          yield ("娜迦", "快速模型配置更新失败，请检查配置信息");return
+      else:
+        yield ("娜迦", "快速模型管理器未初始化");return
+    
+    elif cmd == "test":
+      if s.quick_model and s.quick_model.is_enabled():
+        try:
+          # 测试快速决策
+          decision_result = await s.quick_model.quick_decision(
+            "1+1等于多少？", 
+            decision_type="custom"
+          )
+          
+          # 测试JSON格式化
+          json_result = await s.quick_model.format_json(
+            "测试内容：快速模型正常工作",
+            format_type="simple"
+          )
+          
+          test_msg = f"⚡ 快速模型测试结果：\n"
+          test_msg += f"• 决策测试：{decision_result['decision']} (模型：{decision_result['model_used']}, 耗时：{decision_result['response_time']:.3f}s)\n"
+          test_msg += f"• JSON测试：{'✅ 成功' if json_result['valid_json'] else '❌ 失败'} (模型：{json_result['model_used']}, 耗时：{json_result['response_time']:.3f}s)"
+          
+          yield ("娜迦", test_msg);return
+        except Exception as e:
+          yield ("娜迦", f"快速模型测试失败：{str(e)}");return
+      else:
+        yield ("娜迦", "快速模型未启用或配置不完整");return
+    
+    elif cmd == "enable":
+      if s.quick_model:
+        s.quick_model.config["enabled"] = True
+        yield ("娜迦", "⚡ 快速模型已启用");return
+      else:
+        yield ("娜迦", "快速模型管理器未初始化");return
+    
+    elif cmd == "disable":
+      if s.quick_model:
+        s.quick_model.config["enabled"] = False
+        s.quick_model.enabled = False
+        yield ("娜迦", "快速模型已禁用");return
+      else:
+        yield ("娜迦", "快速模型管理器未初始化");return
+    
+    else:
+      yield ("娜迦", f"未知命令：{cmd}");return
+   
+   # 检查是否需要启用树状思考
+   tree_thinking_enabled = False
+   if s.tree_thinking and s.tree_thinking.is_enabled:
+    # 检查问题复杂度是否需要树状思考
+    from thinking.config import COMPLEX_KEYWORDS
+    question_lower = u.lower()
+    complex_count = sum(1 for keyword in COMPLEX_KEYWORDS if keyword in question_lower)
+    
+    # 降低触发门槛：1个复杂关键词或问题较长即可触发
+    if complex_count >= 1 or len(u) > 50:
+      tree_thinking_enabled = True
+      logger.info(f"检测到复杂问题，启用树状思考 - 复杂关键词: {complex_count}, 长度: {len(u)}")
+      # 调试输出匹配的关键词
+      matched_keywords = [keyword for keyword in COMPLEX_KEYWORDS if keyword in question_lower]
+      logger.info(f"匹配的关键词: {matched_keywords}")
+    else:
+      logger.info(f"未触发树状思考 - 复杂关键词: {complex_count}, 长度: {len(u)}")
+   
    # 兼容升级模式优先判断
    if u.strip() == '#夏园系统兼容升级':
     import subprocess, os, json
@@ -152,6 +298,55 @@ class NagaConversation: # 对话主类
    print(f"语音转文本结束，开始发送给GTP：{now()}") # 语音转文本结束/AI请求前
    theme, level = s.get_theme_and_level(u)
    ctx = s.memory.build_context(u, k=5)
+   
+   # 新增：树状思考处理
+   if tree_thinking_enabled:
+    try:
+      yield ("娜迦", "🌳 检测到复杂问题，启动树状外置思考系统...")
+      
+      # 使用树状思考引擎处理
+      thinking_result = await s.tree_thinking.think_deeply(u)
+      
+      if thinking_result and "answer" in thinking_result:
+        # 输出思考过程信息
+        process_info = thinking_result.get("thinking_process", {})
+        difficulty = process_info.get("difficulty", {})
+        
+        yield ("娜迦", f"\n🧠 深度思考完成：")
+        yield ("娜迦", f"• 问题难度：{difficulty.get('difficulty', 'N/A')}/5")
+        yield ("娜迦", f"• 思考路线：{process_info.get('routes_generated', 0)}条 → {process_info.get('routes_selected', 0)}条")
+        yield ("娜迦", f"• 处理时间：{process_info.get('processing_time', 0):.2f}秒")
+        
+        # 输出最终答案
+        yield ("娜迦", f"\n{thinking_result['answer']}")
+        
+        # 保存记录和记忆
+        final_answer = thinking_result['answer']
+        s.messages+=[{"role":"user","content":u},{"role":"assistant","content":final_answer}]
+        s.save_log(u, final_answer)
+        
+        if not s.dev_mode:
+          faiss_add([{
+              'text': final_answer,
+              'role': 'ai',
+              'time': get_current_datetime(),
+              'file': 'conversation.txt',
+              'theme': theme
+          }])
+        
+        s.memory.add_memory({'role':'user','text':u,'time':get_current_datetime(),'file':datetime.now().strftime('%Y-%m-%d')+'.txt','theme':theme}, level=level)
+        s.memory.add_memory({'role':'ai','text':final_answer,'time':get_current_datetime(),'file':datetime.now().strftime('%Y-%m-%d')+'.txt','theme':theme}, level=level)
+        
+        # 权重调整
+        s.memory.adjust_weights_periodically()
+        return
+      else:
+        yield ("娜迦", "🌳 树状思考处理异常，切换到普通模式...")
+        
+    except Exception as e:
+      logger.error(f"树状思考处理失败: {e}")
+      yield ("娜迦", f"🌳 树状思考系统出错，切换到普通模式: {str(e)}")
+   
    # 添加handoff提示词
    system_prompt = f"{RECOMMENDED_PROMPT_PREFIX}\n{s.get_current_system_prompt()}"
    sysmsg={"role":"system","content":f"历史相关内容召回:\n{ctx}\n\n{system_prompt.format(available_mcp_services=s.mcp.format_available_services())}"} if ctx else {"role":"system","content":system_prompt.format(available_mcp_services=s.mcp.format_available_services())}
@@ -274,6 +469,20 @@ class NagaConversation: # 对话主类
          return s.personality_config['prompt']
      else:
          return s.base_system_prompt
+
+ async def get_response(s, prompt: str, temperature: float = 0.7) -> str:
+     """为树状思考系统提供API调用接口"""
+     try:
+         response = await s.async_client.chat.completions.create(
+             model=DEEPSEEK_MODEL,
+             messages=[{"role": "user", "content": prompt}],
+             temperature=temperature,
+             max_tokens=MAX_TOKENS
+         )
+         return response.choices[0].message.content
+     except Exception as e:
+         logger.error(f"API调用失败: {e}")
+         return f"API调用出错: {str(e)}"
 
 async def process_user_message(s,msg):
     if vcfg.ENABLED and not msg: #无文本输入时启动语音识别

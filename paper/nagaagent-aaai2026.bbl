@@ -1,0 +1,60 @@
+\begin{thebibliography}{8}
+\providecommand{\natexlab}[1]{#1}
+
+\bibitem[{Besta et~al.(2024)Besta, Blach, Kubicek, Gerstenberger, Gianinazzi,
+  Gajda, Lehmann, Podstawski, Niewiadomski, Nyczyk et~al.}]{besta2024graph}
+Besta, M.; Blach, N.; Kubicek, A.; Gerstenberger, R.; Gianinazzi, L.; Gajda,
+  J.; Lehmann, T.; Podstawski, M.; Niewiadomski, H.; Nyczyk, P.; et~al. 2024.
+\newblock Graph of thoughts: Solving elaborate problems with large language
+  models.
+\newblock In \emph{Proceedings of the AAAI Conference on Artificial
+  Intelligence}, volume~38, 17682--17690.
+
+\bibitem[{Graves, Wayne, and Danihelka(2014)}]{graves2014neural}
+Graves, A.; Wayne, G.; and Danihelka, I. 2014.
+\newblock Neural turing machines.
+\newblock \emph{arXiv preprint arXiv:1410.5401}.
+
+\bibitem[{Graves et~al.(2016)Graves, Wayne, Reynolds, Harley, Danihelka,
+  Grabska-Barwi{\'n}ska, Colmenarejo, Grefenstette, Ramalho, Agapiou
+  et~al.}]{graves2016hybrid}
+Graves, A.; Wayne, G.; Reynolds, M.; Harley, T.; Danihelka, I.;
+  Grabska-Barwi{\'n}ska, A.; Colmenarejo, S.~G.; Grefenstette, E.; Ramalho, T.;
+  Agapiou, J.; et~al. 2016.
+\newblock Hybrid computing using a neural network with dynamic external memory.
+\newblock \emph{Nature}, 538(7626): 471--476.
+
+\bibitem[{Long(2023)}]{long2023large}
+Long, J. 2023.
+\newblock Large language model guided tree-of-thought.
+
+\bibitem[{Roller et~al.(2021)Roller, Dinan, Goyal, Ju, Williamson, Liu, Xu,
+  Ott, Smith, Boureau et~al.}]{roller2021recipes}
+Roller, S.; Dinan, E.; Goyal, N.; Ju, D.; Williamson, M.; Liu, Y.; Xu, J.; Ott,
+  M.; Smith, E.~M.; Boureau, Y.-L.; et~al. 2021.
+\newblock Recipes for building an open-domain chatbot.
+\newblock In \emph{Proceedings of the 16th Conference of the European Chapter
+  of the Association for Computational Linguistics: Main Volume}, 300--325.
+
+\bibitem[{Sumers et~al.(2023)Sumers, Yao, Narasimhan, and
+  Griffiths}]{sumers2023cognitive}
+Sumers, T.~R.; Yao, S.; Narasimhan, K.; and Griffiths, T.~L. 2023.
+\newblock Cognitive architectures for language agents.
+\newblock \emph{arXiv preprint arXiv:2309.02427}.
+
+\bibitem[{Yao et~al.(2024)Yao, Yu, Zhao, Shafran, Griffiths, Cao, and
+  Narasimhan}]{yao2024tree}
+Yao, S.; Yu, D.; Zhao, J.; Shafran, I.; Griffiths, T.~L.; Cao, Y.; and
+  Narasimhan, K. 2024.
+\newblock Tree of thoughts: Deliberate problem solving with large language
+  models.
+\newblock \emph{Advances in Neural Information Processing Systems}, 36.
+
+\bibitem[{Zhang et~al.(2018)Zhang, Dinan, Urbanek, Szlam, Kiela, and
+  Weston}]{zhang2018personalizing}
+Zhang, S.; Dinan, E.; Urbanek, J.; Szlam, A.; Kiela, D.; and Weston, J. 2018.
+\newblock Personalizing dialogue agents: I have a dog, do you have pets too?
+\newblock In \emph{Proceedings of the 56th Annual Meeting of the Association
+  for Computational Linguistics (Volume 1: Long Papers)}, 2204--2213.
+
+\end{thebibliography}
