@@ -1,0 +1,95 @@
+{
+  // 系统基础配置
+  "system": {
+    "version": "3.0",                    // 系统版本号
+    "voice_enabled": true,               // 是否启用语音功能
+    "stream_mode": true,                 // 是否启用流式输出
+    "debug": false,                      // 是否启用调试模式
+    "log_level": "WARNING"               // 日志级别：DEBUG/INFO/WARNING/ERROR
+  },
+
+  // API配置（LLM接口）
+  "api": {
+    "api_key": "your-api-key-here",      // LLM API密钥
+    "base_url": "https://api.deepseek.com/v1",  // API基础URL
+    "model": "deepseek-chat",            // 使用的模型名称
+    "temperature": 0.7,                  // 温度参数（0.0-1.0，控制随机性）
+    "max_tokens": 2000,                  // 最大输出token数
+    "max_history_rounds": 10,            // 最大历史对话轮数
+    "top_p": 0.95,                       // Top-p采样参数
+    "timeout": 30,                       // API请求超时时间（秒）
+    "retry_count": 3                     // API请求重试次数
+  },
+
+  // API服务器配置
+  "api_server": {
+    "enabled": true,                     // 是否启用API服务器
+    "host": "127.0.0.1",                 // 服务器监听地址
+    "port": 8000,                        // 服务器端口
+    "auto_start": true,                  // 是否自动启动API服务器
+    "docs_enabled": true                 // 是否启用API文档
+  },
+
+  // GRAG知识图谱配置
+  "grag": {
+    "enabled": true,                     // 是否启用GRAG记忆系统
+    "auto_extract": true,                // 是否自动提取知识
+    "context_length": 5,                 // 上下文长度
+    "similarity_threshold": 0.6,         // 相似度阈值
+    "neo4j_uri": "neo4j://127.0.0.1:7687",  // Neo4j数据库URI
+    "neo4j_user": "neo4j",               // Neo4j用户名
+    "neo4j_password": "your-neo4j-password",  // Neo4j密码
+    "neo4j_database": "neo4j"            // Neo4j数据库名
+  },
+
+  // 工具调用循环配置
+  "handoff": {
+    "max_loop_stream": 5,                // 流式模式最大工具调用循环次数
+    "max_loop_non_stream": 5,            // 非流式模式最大工具调用循环次数
+    "show_output": false                 // 是否显示工具调用输出
+  },
+
+  // 浏览器配置
+  "browser": {
+    "playwright_headless": false         // Playwright浏览器是否无头模式运行
+  },
+
+  // 语音合成(TTS)配置
+  "tts": {
+    "api_key": "your_tts_api_key_here",  // TTS API密钥
+    "port": 5050,                        // TTS服务端口
+    "default_voice": "en-US-AvaNeural",  // 默认语音
+    "default_format": "mp3",             // 默认音频格式
+    "default_speed": 1.0,                // 默认语速
+    "default_language": "en-US",         // 默认语言
+    "remove_filter": false,              // 是否移除过滤器
+    "expand_api": true,                  // 是否扩展API
+    "require_api_key": true              // 是否需要API密钥
+  },
+
+  // 快速模型配置
+  "quick_model": {
+    "enabled": true,                     // 是否启用快速模型
+    "api_key": "your-quick-model-api-key",  // 快速模型API密钥
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3",  // 快速模型API地址
+    "model_name": "doubao-seed-1-6-flash-250615",  // 快速模型名称
+    "max_tokens": 512,                   // 快速模型最大token数
+    "temperature": 0.05,                 // 快速模型温度参数
+    "timeout": 5,                        // 快速模型超时时间
+    "max_retries": 2                     // 快速模型重试次数
+  },
+
+  // 天气API密钥
+  "weather_api_key": "your-weather-api-key",  // 高德地图天气API密钥
+  
+  // 用户界面配置
+  "ui": {
+    "user_name": "用户",                 // 用户名称
+    "bg_alpha": 0.5,                     // 背景透明度
+    "window_bg_alpha": 110,              // 窗口背景透明度
+    "mac_btn_size": 36,                  // Mac按钮大小
+    "mac_btn_margin": 16,                // Mac按钮边距
+    "mac_btn_gap": 12,                   // Mac按钮间距
+    "animation_duration": 600            // 动画持续时间（毫秒）
+  }
+}

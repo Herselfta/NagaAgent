@@ -1,0 +1,107 @@
+[project]
+name = "nagaagent"
+version = "2.1.0"
+description = "NagaAgent 2.1 - 一个强大的AI助手"
+authors = [
+    {name = "柏斯阔落", email = "1781393885@qq.com"},
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    # 核心依赖
+    "mcp>=1.6.0",
+    "openai>=1.76.0",
+    "openai-agents>=0.0.13",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+    "aiohttp>=3.11.18",
+    "pytz>=2024.1",
+    "colorama>=0.4.6",
+    "python-dateutil>=2.9.0.post0",
+    
+    # GRAG知识图谱记忆系统依赖
+    "py2neo>=2021.2.3",
+    "pyvis>=0.3.2",
+    
+    # 流式语音交互相关依赖
+    "flask-cors>=6.0.1",
+    "flask>=3.1.1",
+    "gevent>=25.5.1",
+    "edge-tts>=7.0.2",
+    "emoji>=2.14.1",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "librosa>=0.11.0",
+    "websockets>=12.0",
+    
+    # AI和数据处理相关
+    "numpy>=1.24.0,<2.0.0",
+    "pandas>=2.0.0,<3.0.0",
+    "tqdm>=4.67.1",
+    "scikit-learn>=1.6.1",
+    "scipy>=1.15.2",
+    "transformers>=4.51.3",
+    
+    # 数据处理
+    "pydantic>=2.11.3",
+    "pydantic-settings>=2.9.1",
+    "griffe>=1.7.3",
+    "anyio>=4.9.0",
+    "httpx>=0.28.1",
+    "httpx-sse>=0.4.0",
+    "sse-starlette>=2.3.3",
+    "starlette>=0.46.2",
+    "certifi>=2025.4.26",
+    "charset-normalizer>=3.4.1",
+    "idna>=3.10",
+    "urllib3>=2.4.0",
+    "typing-extensions>=4.13.2",
+    "markdown>=3.8",
+    
+    # GUI相关依赖
+    # 注意：PyQt5现在使用系统版本，通过软链接解决版本兼容性问题
+    # 如果系统没有PyQt5，需要先安装：sudo pacman -S python-pyqt5
+    "pyqt5>=5.15.11",
+    "pyqt5-qt5==5.15.2",
+    "playwright>=1.52.0",
+    "greenlet>=3.2.1",
+    "pyee>=13.0.0",
+    "pygame>=2.6.0",
+    "html2text>=2020.1.16",
+    
+    # 其他工具
+    "tiktoken",
+    "bottleneck>=1.3.6",
+    "matplotlib>=3.5.0",  # 图表绘制和可视化
+]
+
+# 可选依赖组
+[project.optional-dependencies]
+audio = [
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12.1",
+    "pyaudio>=0.2.14",
+]
+
+system-control = [
+    "screen-brightness-control",  # 屏幕亮度调节
+    "pycaw",  # 系统音量调节（Windows）
+    "comtypes",  # pycaw依赖
+]
+
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.20.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+include = ["apiserver","mcpserver","mqtt_tool", "agent", "summer_memory", "thinking", "ui", "voice" ]
+
+[tool.ruff]
+line-length = 120 

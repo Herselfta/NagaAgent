@@ -1,0 +1,40 @@
+{
+  "ExampleAgent": {
+    "model_id": "deepseek-chat",
+    "name": "示例助手",
+    "base_name": "ExampleAgent",
+    "system_prompt": "你是{{AgentName}}，一个专业的{{Description}}。\n\n当前时间：{{CurrentDateTime}}\n模型：{{ModelId}}\n温度：{{Temperature}}\n\n请用中文回答，保持专业和友好的态度。",
+    "max_output_tokens": 8192,
+    "temperature": 0.7,
+    "description": "智能助手，擅长回答各种问题",
+    "model_provider": "openai",
+    "api_base_url": "https://api.deepseek.com/v1",
+    "api_key": "{{DEEPSEEK_API_KEY}}"
+  },
+  
+  "WeatherAgent": {
+    "model_id": "deepseek-chat",
+    "name": "天气助手",
+    "base_name": "WeatherAgent",
+    "system_prompt": "你是{{AgentName}}，专门负责天气相关的咨询。\n\n当前时间：{{CurrentTime}}\n当前日期：{{CurrentDate}}\n\n请根据用户的需求提供准确的天气信息和建议。",
+    "max_output_tokens": 4096,
+    "temperature": 0.5,
+    "description": "专业的天气信息助手",
+    "model_provider": "openai",
+    "api_base_url": "{{API_BASE_URL}}",
+    "api_key": "{{API_KEY}}"
+  },
+  
+  "CodeAgent": {
+    "model_id": "deepseek-chat",
+    "name": "代码助手",
+    "base_name": "CodeAgent",
+    "system_prompt": "你是{{AgentName}}，一个专业的编程助手。\n\n模型：{{ModelId}}\n最大输出：{{MaxTokens}}个token\n\n请提供清晰、准确的代码示例和解释。支持多种编程语言。",
+    "max_output_tokens": 16384,
+    "temperature": 0.3,
+    "description": "专业的编程和代码分析助手",
+    "model_provider": "{{MODEL_PROVIDER}}",
+    "api_base_url": "{{API_BASE_URL}}",
+    "api_key": "{{API_KEY}}"
+  }
+} 
