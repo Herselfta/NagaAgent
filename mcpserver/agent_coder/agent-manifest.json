@@ -1,0 +1,66 @@
+{
+  "name": "CoderAgent",
+  "displayName": "代码编辑Agent",
+  "version": "1.0.0",
+  "description": "支持代码编辑、读取、运行和shell命令执行。",
+  "author": "Naga代码生成模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.agent_coder.agent_coder",
+    "class": "CoderAgent"
+  },
+  "factory": {
+    "create_instance": "create_coder_agent",
+    "validate_config": "validate_agent_config",
+    "get_dependencies": "get_agent_dependencies"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "edit",
+        "description": "编辑或创建代码文件。\n- `action`: 固定为 `edit`\n- `file`: 文件路径\n- `code`: 代码内容\n- `mode`: 写入模式（w覆盖/a追加，默认w）\n**调用示例:**\n```json\n{\"action\": \"edit\", \"file\": \"test.py\", \"code\": \"print('hello')\"}```",
+        "example": "{\"action\": \"edit\", \"file\": \"test.py\", \"code\": \"print('hello')\"}"
+      },
+      {
+        "command": "read",
+        "description": "读取代码文件内容。\n- `action`: 固定为 `read`\n- `file`: 文件路径\n**调用示例:**\n```json\n{\"action\": \"read\", \"file\": \"test.py\"}```",
+        "example": "{\"action\": \"read\", \"file\": \"test.py\"}"
+      },
+      {
+        "command": "run",
+        "description": "运行Python代码文件。\n- `action`: 固定为 `run`\n- `file`: 文件路径\n- `timeout`: 超时时间（秒，默认10）\n**调用示例:**\n```json\n{\"action\": \"run\", \"file\": \"test.py\"}```",
+        "example": "{\"action\": \"run\", \"file\": \"test.py\"}"
+      },
+      {
+        "command": "shell",
+        "description": "执行shell命令。\n- `action`: 固定为 `shell`\n- `cmd`: 命令内容\n- `timeout`: 超时时间（秒，默认10）\n**调用示例:**\n```json\n{\"action\": \"shell\", \"cmd\": \"ls -la\"}```",
+        "example": "{\"action\": \"shell\", \"cmd\": \"ls -la\"}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {"type": "string", "description": "操作类型，如edit/read/run/shell"},
+      "file": {"type": "string", "description": "文件路径（edit/read/run时必需）"},
+      "code": {"type": "string", "description": "代码内容（edit时必需）"},
+      "mode": {"type": "string", "description": "写入模式（edit时可选，默认w）"},
+      "cmd": {"type": "string", "description": "shell命令（shell时必需）"},
+      "timeout": {"type": "integer", "description": "超时时间（秒，run/shell时可选）"}
+    },
+    "required": ["action"]
+  },
+  "configSchema": {
+    "CODE_AGENT_DEFAULT_TIMEOUT": "integer"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 

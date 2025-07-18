@@ -1,6 +1,6 @@
 import asyncio,openai,sounddevice as sd,numpy as np,logging
-from voice.voice_config import config as vcfg
-
+#from config import config as vcfg
+from voice.input.voice_config import config as vcfg
 logger=logging.getLogger("VoiceHandler")
 
 class VoiceHandler:

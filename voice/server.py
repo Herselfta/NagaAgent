@@ -5,16 +5,30 @@ import base64
 import librosa
 from flask import Flask, request, send_file, jsonify
 from gevent.pywsgi import WSGIServer
+
 import os
 from flask_cors import CORS
 
-from handle_text import prepare_tts_input_with_context
-from tts_handler import generate_speech, get_models, get_voices
-from utils import require_api_key, AUDIO_FORMAT_MIME_TYPES
+from voice.handle_text import prepare_tts_input_with_context
+from voice.tts_handler import generate_speech, get_models, get_voices
+from voice.utils import require_api_key, AUDIO_FORMAT_MIME_TYPES
 from config import config # 统一配置系统
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+# CORS(app, resources={r"/*": {"origins": "*"}})
+'''
+ curl -X POST http://localhost:5050/v1/audio/speech 
+  -H "Content-Type: application/json" 
+  -H "Authorization: Bearer your_api_key_here" 
+  -d '{
+    "input": "Hello, I am your AI assistant! Just let me know how I can help bring your ideas to life.",
+    "voice": "echo",
+    "response_format": "mp3",
+    "speed": 1.1
+  }' 
+  --output speech.mp3
+
+'''
 
 API_KEY = config.tts.api_key
 PORT = config.tts.port
@@ -29,30 +43,25 @@ EXPAND_API = config.tts.expand_api
 @app.route('/v1/audio/speech', methods=['POST'])
 @app.route('/audio/speech', methods=['POST'])  # 增加别名接口
 @require_api_key
-# 文本转语音主接口
 def text_to_speech():
     data = request.json
     if not data or 'input' not in data:
-        return jsonify({"error": "请求体缺少 'input' 字段"}), 400
+        return jsonify({"error": "Missing 'input' in request body"}), 400
 
     text = data.get('input')
-
-    if not REMOVE_FILTER:
-        text = prepare_tts_input_with_context(text)
-
     # model = data.get('model', DEFAULT_MODEL)
     voice = data.get('voice', DEFAULT_VOICE)
 
-    response_format = data.get('response_format', DEFAULT_RESPONSE_FORMAT)
+    response_format = data.get('response_format', 'mp3')
     speed = float(data.get('speed', DEFAULT_SPEED))
     
     mime_type = AUDIO_FORMAT_MIME_TYPES.get(response_format, "audio/mpeg")
 
-    # 生成音频文件
+    # Generate the audio file in the specified format with speed adjustment
     output_file_path = generate_speech(text, voice, response_format, speed)
 
-    # 返回音频文件，设置正确的MIME类型
-    return send_file(output_file_path, mimetype=mime_type, as_attachment=True, download_name=f"speech.{response_format}")
+    # Return the file with the correct MIME type
+    return send_file(output_file_path, mimetype=mime_type, as_attachment=True, download_name=f"speech.mp3")
 
 @app.route('/v1/models', methods=['GET', 'POST'])
 @app.route('/models', methods=['GET', 'POST'])

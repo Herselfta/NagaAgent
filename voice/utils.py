@@ -5,14 +5,17 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))  # 加入项目根�
 from flask import request, jsonify
 from functools import wraps
 from config import config  # 使用统一配置系统
+DEFAULT_LANGUAGE = config.tts.default_language # 统一配置
 
-API_KEY = config.tts.api_key
-REQUIRE_API_KEY = config.tts.require_api_key
 
 def getenv_bool(key: str, default: bool = False) -> bool:
     """从环境变量获取布尔值"""
     value = os.getenv(key, str(default)).lower()
     return value in ('true', '1', 'yes', 'on')
+
+API_KEY = config.tts.api_key
+REQUIRE_API_KEY = config.tts.require_api_key
+DETAILED_ERROR_LOGGING = getenv_bool('DETAILED_ERROR_LOGGING', True)
 
 def require_api_key(f):
     @wraps(f)

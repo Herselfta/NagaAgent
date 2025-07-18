@@ -7,5 +7,7 @@ class VoiceConfig(BaseModel): #语音配置
     SAMPLE_RATE:int=16000 #采样率
     CHUNK_SIZE:int=4096 #音频块大小
     ENABLED:bool=False #是否启用语音
+    OPENAI_API_KEY:str="" #OpenAI API密钥
+    
     
 config=VoiceConfig() #全局配置实例 

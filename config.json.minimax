@@ -1,0 +1,43 @@
+{
+  "system": {
+    "version": "3.0",
+    "voice_enabled": true,
+    "stream_mode": true,
+    "debug": false,
+    "log_level": "WARNING",
+    "voice_enabled": true
+  },
+  "api": {
+    "api_key": "",
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "mcp": {
+    "agent_tool_name": "agent",
+    "agent_priority": true,
+    "auto_discover_agents": true,
+    "auto_discover_mcp": true,
+    "exclude_agent_tools_from_mcp": true
+  },
+  "tts":{
+    "api_key": "",
+    "port": 5051,
+    "default_voice": "danya_xuejie",
+    "default_format": "pcm",
+    "default_speed": 1.0,
+    "default_language": "zh-CN",
+    "require_api_key": false,
+    "remove_filter": false,
+    "expand_api": true,
+    "provider": "minimax",
+    "group_id": "",
+    "tts_model": "speech-02-hd",
+    "emotion": "neutral"
+  },
+  "grag":{
+    "neo4j_uri": "",
+    "neo4j_password": ""
+  }
+}

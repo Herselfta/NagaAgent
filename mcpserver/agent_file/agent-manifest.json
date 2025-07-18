@@ -1,0 +1,75 @@
+{
+  "name": "FileAgent",
+  "displayName": "文件操作Agent",
+  "version": "1.0.0",
+  "description": "支持文件的读写、创建、删除、目录管理等操作。",
+  "author": "Naga文件操作模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.agent_file.agent_file",
+    "class": "FileAgent"
+  },
+  "factory": {
+    "create_instance": "create_file_agent",
+    "validate_config": "validate_agent_config",
+    "get_dependencies": "get_agent_dependencies"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "read",
+        "description": "读取指定文件内容。\n- `action`: 固定为 `read`\n- `path`: 文件路径\n**调用示例:**\n```json\n{\"action\": \"read\", \"path\": \"test.txt\"}```",
+        "example": "{\"action\": \"read\", \"path\": \"test.txt\"}"
+      },
+      {
+        "command": "write",
+        "description": "写入内容到指定文件。\n- `action`: 固定为 `write`\n- `path`: 文件路径\n- `content`: 写入内容\n- `append`: 是否追加（可选）\n**调用示例:**\n```json\n{\"action\": \"write\", \"path\": \"test.txt\", \"content\": \"hello\"}```",
+        "example": "{\"action\": \"write\", \"path\": \"test.txt\", \"content\": \"hello\"}"
+      },
+      {
+        "command": "list",
+        "description": "列出目录下的文件和文件夹。\n- `action`: 固定为 `list`\n- `path`: 目录路径\n**调用示例:**\n```json\n{\"action\": \"list\", \"path\": \".\"}```",
+        "example": "{\"action\": \"list\", \"path\": \".\"}"
+      },
+      {
+        "command": "delete",
+        "description": "删除文件或目录。\n- `action`: 固定为 `delete`\n- `path`: 文件或目录路径\n- `recursive`: 是否递归删除（可选，目录时有效）\n**调用示例:**\n```json\n{\"action\": \"delete\", \"path\": \"test.txt\"}```",
+        "example": "{\"action\": \"delete\", \"path\": \"test.txt\"}"
+      },
+      {
+        "command": "mkdir",
+        "description": "创建目录。\n- `action`: 固定为 `mkdir`\n- `path`: 目录路径\n**调用示例:**\n```json\n{\"action\": \"mkdir\", \"path\": \"newdir\"}```",
+        "example": "{\"action\": \"mkdir\", \"path\": \"newdir\"}"
+      },
+      {
+        "command": "create",
+        "description": "创建空文件。\n- `action`: 固定为 `create`\n- `path`: 文件路径\n**调用示例:**\n```json\n{\"action\": \"create\", \"path\": \"empty.txt\"}```",
+        "example": "{\"action\": \"create\", \"path\": \"empty.txt\"}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "action": {"type": "string", "description": "操作类型，如read/write/list/delete/mkdir/create"},
+      "path": {"type": "string", "description": "文件或目录路径"},
+      "content": {"type": "string", "description": "写入内容（write时必需）"},
+      "append": {"type": "boolean", "description": "是否追加（write时可选）"},
+      "recursive": {"type": "boolean", "description": "是否递归删除（delete时可选）"}
+    },
+    "required": ["action", "path"]
+  },
+  "configSchema": {
+    "FILE_AGENT_BASE_DIR": "string"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 

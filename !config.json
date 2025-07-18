@@ -1,0 +1,44 @@
+# minimax key & group_id 用于给你快速测试，之后帮我删了，三天后更新
+{
+  "system": {
+    "version": "3.0",
+    "voice_enabled": true,
+    "stream_mode": true,
+    "debug": false,
+    "log_level": "WARNING",
+    "voice_enabled": true
+  },
+  "api": {
+    "api_key": "",
+    "base_url": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "mcp": {
+    "agent_tool_name": "agent",
+    "agent_priority": true,
+    "auto_discover_agents": true,
+    "auto_discover_mcp": true,
+    "exclude_agent_tools_from_mcp": true
+  },
+  "tts":{
+    "api_key": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJHcm91cE5hbWUiOiLmtbfonrrnlKjmiLdfMzU5MzMwMjc1Mjg0NjY4NDE3IiwiVXNlck5hbWUiOiLmtbfonrrnlKjmiLdfMzU5MzMwMjc1Mjg0NjY4NDE3IiwiQWNjb3VudCI6IiIsIlN1YmplY3RJRCI6IjE5MDI5MTYyNzU4NDQxNTc0NTUiLCJQaG9uZSI6IjE1MzU5OTY4MTE5IiwiR3JvdXBJRCI6IjE5MDI5MTYyNzU4Mzk5NjMxNTEiLCJQYWdlTmFtZSI6IiIsIk1haWwiOiIiLCJDcmVhdGVUaW1lIjoiMjAyNS0wNy0xMiAxNTowMTo0NiIsIlRva2VuVHlwZSI6MSwiaXNzIjoibWluaW1heCJ9.KshJwA3M9K5AaFaVT7T0ALLeHKLdQbQq064FVstc7Zr7btb4RL07rT3X_L26PWIx27o4birB54eLAgzdQiuXsTCfCsaHYn9qTEVXAkJAmVji0pDt6EG7h5-uhv3JVns0cBxP7T5gof22Ma6XGQKMfQ8LZWbEVhiNpsJ3KStNK9jV1SI7Qaf3oDymOfjbQWlfXL8DKWDPV1XiVhyZAqZkWdzx3YLc1-M62pRvk5_sPoz4Azq2AqxMh5KJCcd221xr9_YZHFRc7qS4nNp8LcK-ve4w4PnB8EglcUjXuXU51X4LyjACgSes7qRgDsM6TpJTkoz7t3OM2ZGiy5BHd3zz7g",
+    "port": 5051,
+    "default_voice": "danya_xuejie",
+    "default_format": "pcm",
+    "default_speed": 1.0,
+    "default_language": "zh-CN",
+    "require_api_key": false,
+    "remove_filter": false,
+    "expand_api": true,
+    "provider": "minimax",
+    "group_id": "1902916275839963151",
+    "tts_model": "speech-02-hd",
+    "emotion": "neutral"
+  },
+  "grag":{
+    "neo4j_uri": "",
+    "neo4j_password": ""
+  }
+}
