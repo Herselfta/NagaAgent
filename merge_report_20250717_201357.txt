@@ -1,0 +1,67 @@
+AI Merge Conflict Resolution Report
+========================================
+Overall Summary:
+  - Total Files Scanned: 19
+  - Files with Conflicts Processed: 17
+  --- Breakdown of Resolved Conflict Types ---
+  - Identical: 8
+  - One-sided: 28
+  - Complex: 12
+  - Failed to Resolve: 2
+========================================
+
+Detailed File Report:
+========================================
+File: summer_memory/memory_manager.py
+  - Resolved 1 conflict(s) of type: identical
+
+File: thinking/README.md
+  - Resolved 1 conflict(s) of type: identical
+
+File: agent/plugin_manager.py
+  - Resolved 1 conflict(s) of type: identical
+
+File: agent/preprocessor.py
+  - Resolved 1 conflict(s) of type: identical
+
+File: thinking/quick_model_manager.py
+  - Resolved 2 conflict(s) of type: one-sided
+
+File: ui/README_UPGRADE.md
+  - Resolved 1 conflict(s) of type: identical
+
+File: ui/enhanced_worker.py
+  - Resolved 4 conflict(s) of type: one-sided
+
+File: voice/input/voice_handler.py
+  - Resolved 1 conflict(s) of type: one-sided
+
+File: voice/server.py
+  - Resolved 3 conflict(s) of type: one-sided
+
+File: voice/audio_player.py
+  - Resolved 1 conflict(s) of type: identical
+
+File: voice/utils.py
+  - Resolved 1 conflict(s) of type: complex
+
+File: voice/start_voice_service.py
+  - Resolved 1 conflict(s) of type: one-sided
+
+File: voice/voice_status.py
+  - Resolved 1 conflict(s) of type: identical
+
+File: voice/tts_handler.py
+  - Resolved 1 conflict(s) of type: one-sided
+  - Resolved 1 conflict(s) of type: identical
+  - Resolved 4 conflict(s) of type: complex
+
+File: summer_memory/triples.json
+  - Resolved 1 conflict(s) of type: failed
+
+File: voice/voice_integration.py
+  - Resolved 1 conflict(s) of type: failed
+
+File: conversation_core.py
+  - Resolved 7 conflict(s) of type: complex
+  - Resolved 16 conflict(s) of type: one-sided

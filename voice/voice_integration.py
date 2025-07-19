@@ -27,6 +27,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from config import config
 from concurrent.futures import ThreadPoolExecutor
+from .audio_player import get_audio_player
 
 logger = logging.getLogger("VoiceIntegration")
 executor = ThreadPoolExecutor(max_workers=1)
@@ -38,17 +39,17 @@ class VoiceIntegration:
     def __init__(self):
         self.enabled = config.system.voice_enabled
         self.provider = getattr(config.tts, 'provider', 'edge-tts')
+        self.audio_player = get_audio_player()  # 获取音频播放器实例
         
         # 通用配置
         self.tts_url = f"http://127.0.0.1:{config.tts.port}/v1/audio/speech"
         self._last_text = None  # 用来记录上一次播放的文本
         self._playing_texts = set()  # 正在播放的文本集合（用于防重复）
         self._text_lock = threading.Lock()  # 线程锁
-        # self._call_counter = {}  # 调用计数器，用于调试 - 已注释
         self.text_buffer = []  # 文本缓冲区
-        self.sentence_endings = ['.', '!', '?', '。', '！', '？', '；', ';']
-        self.min_sentence_length = 10  # 最小句子长度
-        self.max_buffer_size = 5  # 最大缓冲区大小
+        self.sentence_endings = ['.', '!', '?', '。', '！', '？', '；', ';', '，', ',']  # 更完整的切分标点
+        self.max_buffer_char_length = 100  # 缓冲区最大字符长度
+        self.split_threshold_chars = int(self.max_buffer_char_length * 0.9) # 90%阈值
         
         # Minimax配置
         self.api_key = getattr(config.tts, 'api_key', '')
@@ -105,50 +106,59 @@ class VoiceIntegration:
         if text and text.strip():
             # chunk_hash = hash(text.strip())
             self.text_buffer.append(text.strip())
-            logger.debug(f"接收文本片段: {text[:50]}..., 缓冲区大小: {len(self.text_buffer)}")
+            logger.debug(f"接收文本片段: {text[:50]}..., 缓冲区大小: {len(''.join(self.text_buffer))} chars")
             
             # 检查是否有完整句子
             self._check_and_play_sentences()
     
     def _check_and_play_sentences(self):
-        """检查并播放完整句子"""
-        # if len(self.text_buffer) < 1:
-        #     return
+        """检查并播放完整句子 - 基于缓冲区填充率和标点进行智能切分"""
+        if not self.text_buffer:
+            return
             
-        # 合并缓冲区文本
-        combined_text = ' '.join(self.text_buffer)
+        combined_text = ''.join(self.text_buffer)
+        text_len = len(combined_text)
+
+        text_to_play = ""
+        remaining_text = combined_text
+
+        # 条件1：缓冲区满，强制切分
+        if text_len >= self.max_buffer_char_length:
+            # 从缓冲区末尾向前找最后一个标点，尽量保证句子完整
+            split_pos = -1
+            for char in self.sentence_endings:
+                pos = combined_text.rfind(char, 0, self.max_buffer_char_length)
+                if pos > split_pos:
+                    split_pos = pos
+            
+            # 如果找不到任何标点，就在最大长度处硬切分
+            split_point = split_pos + 1 if split_pos != -1 else self.max_buffer_char_length
+            
+            text_to_play = combined_text[:split_point]
+            remaining_text = combined_text[split_point:]
+
+        # 条件2：超过90%且遇到标点
+        elif text_len > self.split_threshold_chars:
+            last_split_pos = -1
+            # 找到文本中最后一个标点
+            for char in self.sentence_endings:
+                pos = combined_text.rfind(char)
+                if pos > last_split_pos:
+                    last_split_pos = pos
+            
+            # 如果找到了标点，就在那里切分
+            if last_split_pos != -1:
+                text_to_play = combined_text[:last_split_pos + 1]
+                remaining_text = combined_text[last_split_pos + 1:]
         
-        # 查找句子结束位置
-        sentence_end_pos = -1
-        for ending in self.sentence_endings:
-            pos = combined_text.rfind(ending)
-            if pos > sentence_end_pos:
-                sentence_end_pos = pos
-
-
-        # 防止缓冲区过大
-        if len(self.text_buffer) > self.max_buffer_size:
-            # 强制播放缓冲区内容
-            forced_text = ' '.join(self.text_buffer)
-            self._play_text_in_background(forced_text)
-            self.text_buffer = []
-
-        # 如果有完整句子且长度足够
-        if sentence_end_pos > 0 and sentence_end_pos >= self.min_sentence_length:
-            complete_sentence = combined_text[:sentence_end_pos + 1]
-            remaining_text = combined_text[sentence_end_pos + 1:].strip()
+        # 如果有需要播放的内容，则执行播放并更新缓冲区
+        if text_to_play:
+            clean_text_to_play = text_to_play.strip()
+            if clean_text_to_play:
+                self._play_text_in_background(clean_text_to_play)
             
-            # 在后台线程播放完整句子
-            self._play_text_in_background(complete_sentence)
-            
-            # 更新缓冲区
-            if remaining_text:
-                self.text_buffer = [remaining_text]
-            else:
-                self.text_buffer = []
-        
+            self.text_buffer = [remaining_text.strip()] if remaining_text.strip() else []
 
-    
     async def _play_text(self, text: str):
         """播放文本音频"""
         try:
@@ -208,102 +218,16 @@ class VoiceIntegration:
         except Exception as e:
             logger.error(f"生成音频异常: {e}")
             return None
-    
+
     async def _play_audio(self, audio_data: bytes):
-        """播放音频数据"""
+        """播放音频数据，使用全局唯一的AudioPlayer实例"""
         try:
-            # 尝试使用pydub播放（更好的音频处理）
-            if await self._play_with_pyaudio(audio_data):
-                return
-            
-            # 回退到文件播放方式
-            with tempfile.NamedTemporaryFile(suffix=f".{config.tts.default_format}", delete=False) as temp_file:
-                temp_file.write(audio_data)
-                temp_file_path = temp_file.name
-            
-            # 使用pygame播放
-            await self._play_with_pygame(temp_file_path)
-            
-            # 清理临时文件
-            try:
-                os.unlink(temp_file_path)
-            except:
-                pass
-                
+            # 委托给AudioPlayer进行播放，它内置了播放管理逻辑
+            success = await self.audio_player.play_audio_data(audio_data, format=config.tts.default_format)
+            if not success:
+                logger.warning("AudioPlayer未能成功播放音频")
         except Exception as e:
-            logger.error(f"播放音频文件失败: {e}")
-    
-
-            
-        except ImportError:
-            logger.debug("pydub未安装，使用备选播放方案")
-            return False
-        except Exception as e:
-            logger.warning(f"pydub播放失败: {e}")
-            return False
-    
-    async def _play_audio_file(self, file_path: str):
-        """播放音频文件"""
-        try:
-            import platform
-            import subprocess
-
-            
-            system = platform.system()
-            
-            if system == "Windows":
-                # Windows使用winsound或windows media player
-                try:
-                    import winsound
-                    os.startfile(file_path)
-                except ImportError:
-                    subprocess.run(["start", "", file_path], shell=True, check=False)
-                except Exception as e:
-                    logger.error(f"os.startfile 播放失败: {e}")
-            elif system == "Darwin":  # macOS
-                subprocess.run(["afplay", file_path], check=False)
-            elif system == "Linux":
-                # Linux尝试多种播放器
-                players = ["aplay", "paplay", "mpg123", "mpv", "vlc", "xdg-open"]
-                for player in players:
-                    try:
-                        result = subprocess.run([player, file_path], 
-                                               check=False, 
-                                               capture_output=True, 
-                                               timeout=10)
-                        if result.returncode == 0:
-                            break
-                    except (subprocess.TimeoutExpired, FileNotFoundError):
-                        continue
-                else:
-                    logger.warning("找不到可用的音频播放器")
-            else:
-                logger.warning(f"不支持的操作系统: {system}")
-                
-        except Exception as e:
-            logger.error(f"系统播放器调用失败: {e}")
-            # 尝试使用 pygame 作为备选方案
-            try:
-                await self._play_with_pygame(file_path)
-            except Exception as pygame_error:
-                logger.error(f"pygame播放也失败: {pygame_error}")
-    
-    async def _play_with_pygame(self, file_path: str):
-        """使用pygame播放音频（备选方案）"""
-        try:
-            import pygame
-            pygame.mixer.init()
-            pygame.mixer.music.load(file_path)
-            pygame.mixer.music.play()
-            
-            # 等待播放完成
-            while pygame.mixer.music.get_busy():
-                await asyncio.sleep(0.1)
-                
-        except ImportError:
-            logger.warning("pygame未安装，无法作为备选播放器")
-        except Exception as e:
-            logger.error(f"pygame播放失败: {e}")
+            logger.error(f"播放音频时发生错误: {e}")
     
     def _play_text_in_background(self, text: str):
         """在后台线程中播放文本音频"""

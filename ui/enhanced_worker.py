@@ -7,6 +7,10 @@ import asyncio
 import time
 from PyQt5.QtCore import QThread, pyqtSignal
 from ui.response_utils import extract_message
+import pdb
+import re
+import markdown
+from bs4 import BeautifulSoup
 
 class EnhancedWorker(QThread):
     """增强版工作线程"""
@@ -16,7 +20,8 @@ class EnhancedWorker(QThread):
     progress_updated = pyqtSignal(int, str)  # 进度更新信号 (value, status)
     status_changed = pyqtSignal(str)  # 状态变化信号
     error_occurred = pyqtSignal(str)  # 错误发生信号
-    partial_result = pyqtSignal(str)  # 部分结果信号（流式输出）
+    stream_chunk = pyqtSignal(str)  # 部分结果信号（流式输出）
+    stream_complete = pyqtSignal() # 流式输出完成信号
     
     def __init__(self, naga, user_input, parent=None):
         super().__init__(parent)
@@ -88,98 +93,32 @@ class EnhancedWorker(QThread):
             self.status_changed.emit("正在生成回复...")
             self.progress_updated.emit(40, "AI正在思考")
             
+            # 初始化流式传输的缓冲区和字数统计
+            self.streaming_buffer = ""
+            word_count = 0
+            
             async for chunk in self.naga.process(self.user_input):
                 if self.is_cancelled:
                     break
-                    
-                chunk_count += 1
-                
+
                 # 处理chunk格式 - 不进行extract_message处理，直接累积原始内容
                 if isinstance(chunk, tuple) and len(chunk) == 2:
                     speaker, content = chunk
                     if speaker == "娜迦":
                         content_str = str(content)
                         result_chunks.append(content_str)
-                        # 发送部分结果用于实时显示
-                        self.partial_result.emit(content_str)
-                else:
-                    content_str = str(chunk)
-                    result_chunks.append(content_str)
-                    self.partial_result.emit(content_str)
-                
-                # 更新进度
-                progress = min(90, 40 + chunk_count * 2)
-                self.progress_updated.emit(progress, f"正在生成回复... ({chunk_count})")
-                
-                # 短暂休眠，让UI有时间更新
-                await asyncio.sleep(0.01)
-            
-            if not self.is_cancelled:
-                self.progress_updated.emit(95, "完成生成")
-                full_result = ''.join(result_chunks)
-                
-                # 处理完成
-                elapsed = time.time() - start_time
-                self.status_changed.emit(f"完成 (用时 {elapsed:.1f}s)")
-                self.progress_updated.emit(100, "处理完成")
-                
-                return full_result
-            else:
-                return ""
-                
-        except Exception as e:
-            self.error_occurred.emit(f"异步处理错误: {str(e)}")
-            raise
-
-
-class StreamingWorker(EnhancedWorker):
-    """流式处理Worker，专门优化流式对话体验"""
-    
-    # 额外信号
-    stream_chunk = pyqtSignal(str)  # 流式数据块
-    stream_complete = pyqtSignal()  # 流式完成
-    
-    def __init__(self, naga, user_input, parent=None):
-        super().__init__(naga, user_input, parent)
-        self.streaming_buffer = ""
-        
-    async def process_with_progress(self):
-        """流式处理优化版本"""
-        start_time = time.time()
-        
-        try:
-            self.status_changed.emit("连接到AI...")
-            self.progress_updated.emit(15, "建立连接")
-            
-            if self.is_cancelled:
-                return ""
-            
-            self.status_changed.emit("正在思考...")
-            self.progress_updated.emit(30, "[夏园系统]:正在使用CPU推理")
-            
-            # 开始流式处理
-            result_chunks = []
-            word_count = 0
-            
-            async for chunk in self.naga.process(self.user_input):
-                if self.is_cancelled:
-                    break
-                
-                # 处理chunk - 不进行extract_message处理，直接累积原始内容
-                if isinstance(chunk, tuple) and len(chunk) == 2:
-                    speaker, content = chunk
-                    if speaker == "娜迦":
-                        content_str = str(content)
-                        result_chunks.append(content_str)
-                        
-                        # 发送流式数据到前端
+                        # 发送到UI进行流式显示
                         self.stream_chunk.emit(content_str)
                         
-                        # 发送文本到语音集成模块
+                        # 发送到语音模块进行流式播报
                         try:
                             from voice.voice_integration import get_voice_integration
+                            # 清理Markdown格式
+                            html = markdown.markdown(content_str)
+                            soup = BeautifulSoup(html, 'html.parser')
+                            cleaned_content = soup.get_text()
                             voice_integration = get_voice_integration()
-                            voice_integration.receive_text_chunk(content_str)
+                            voice_integration.receive_text_chunk(cleaned_content)
                         except Exception as e:
                             print(f"语音集成错误: {e}")
                         
@@ -191,11 +130,14 @@ class StreamingWorker(EnhancedWorker):
                     result_chunks.append(content_str)
                     self.stream_chunk.emit(content_str)
                     
-                    # 发送文本到语音集成模块
                     try:
                         from voice.voice_integration import get_voice_integration
+                        # 清理Markdown格式
+                        html = markdown.markdown(content_str)
+                        soup = BeautifulSoup(html, 'html.parser')
+                        cleaned_content = soup.get_text()
                         voice_integration = get_voice_integration()
-                        voice_integration.receive_text_chunk(content_str)
+                        voice_integration.receive_text_chunk(cleaned_content)
                     except Exception as e:
                         print(f"语音集成错误: {e}")
                     
@@ -227,10 +169,14 @@ class StreamingWorker(EnhancedWorker):
                     from voice.voice_integration import get_voice_integration
                     voice_integration = get_voice_integration()
                     final_text = ''.join(result_chunks)
-                    voice_integration.receive_final_text(final_text)
+                    # 清理Markdown格式
+                    html = markdown.markdown(final_text)
+                    soup = BeautifulSoup(html, 'html.parser')
+                    cleaned_final_text = soup.get_text()
+                    voice_integration.receive_final_text(cleaned_final_text)
                 except Exception as e:
                     print(f"语音集成错误: {e}")
-                
+
                 # 流式完成
                 self.stream_complete.emit()
                 
@@ -290,7 +236,11 @@ class BatchWorker(EnhancedWorker):
                     from voice.voice_integration import get_voice_integration
                     voice_integration = get_voice_integration()
                     final_text = ''.join(result_chunks)
-                    voice_integration.receive_final_text(final_text)
+                    # 清理Markdown格式
+                    html = markdown.markdown(final_text)
+                    soup = BeautifulSoup(html, 'html.parser')
+                    cleaned_final_text = soup.get_text()
+                    voice_integration.receive_final_text(cleaned_final_text)
                 except Exception as e:
                     print(f"语音集成错误: {e}")
                 
