@@ -11,7 +11,6 @@ import tempfile
 import os
 from typing import Optional, Union
 from pathlib import Path
-from asyncio.subprocess import Process
 
 logger = logging.getLogger("AudioPlayer")
 
@@ -20,7 +19,7 @@ class AudioPlayer:
     
     def __init__(self):
         self.system = platform.system()
-        self._current_process: Optional[Process] = None
+        self._current_process: Optional[subprocess.Popen] = None
         
     async def play_audio_file(self, file_path: Union[str, Path]) -> bool:
         """播放音频文件"""
@@ -73,29 +72,25 @@ class AudioPlayer:
     
     async def stop(self):
         """停止当前播放"""
-        if self._current_process and self._current_process.returncode is None:
+        if self._current_process:
             try:
                 self._current_process.terminate()
                 await asyncio.wait_for(self._current_process.wait(), timeout=2.0)
-            except ProcessLookupError:
-                # 进程已经结束，这是正常情况，无需处理
-                pass
             except asyncio.TimeoutError:
                 self._current_process.kill()
-                await self._current_process.wait()
             except Exception as e:
-                logger.warning(f"停止播放时出错: {e!r}")
+                logger.warning(f"停止播放时出错: {e}")
             finally:
                 self._current_process = None
     
     async def _play_windows(self, file_path: str) -> bool:
         """Windows系统播放"""
         try:
-            cmd = f'start "" "{file_path}"'
-            self._current_process = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL
+            self._current_process = subprocess.Popen(
+                ["start", file_path], 
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
             return True
         except Exception as e:
@@ -105,18 +100,14 @@ class AudioPlayer:
     async def _play_macos(self, file_path: str) -> bool:
         """macOS系统播放"""
         try:
-            # 优先使用 afplay，这是一个会等待播放完成的命令行工具
-            self._current_process = await asyncio.create_subprocess_exec(
-                "afplay", file_path,
-                stdout=asyncio.subprocess.DEVNULL,
-                stderr=asyncio.subprocess.DEVNULL
+            self._current_process = subprocess.Popen(
+                ["open", file_path],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
             )
             return True
-        except FileNotFoundError:
-            logger.error("macOS 播放失败: 'afplay' 命令未找到。这是 macOS 自带的命令，请检查您的系统。")
-            return False
         except Exception as e:
-            logger.error(f"macOS 使用 'afplay' 播放失败: {e!r}")
+            logger.error(f"macOS播放失败: {e}")
             return False
     
     async def _play_linux(self, file_path: str) -> bool:
@@ -127,11 +118,18 @@ class AudioPlayer:
             
             for player in players:
                 try:
-                    self._current_process = await asyncio.create_subprocess_exec(
-                        player, file_path,
-                        stdout=asyncio.subprocess.DEVNULL,
-                        stderr=asyncio.subprocess.DEVNULL
-                    )
+                    if player == "xdg-open":
+                        self._current_process = subprocess.Popen(
+                            [player, file_path],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+                    else:
+                        self._current_process = subprocess.Popen(
+                            [player, file_path],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
                     return True
                 except FileNotFoundError:
                     continue
@@ -146,7 +144,7 @@ class AudioPlayer:
     def is_playing(self) -> bool:
         """检查是否正在播放"""
         if self._current_process:
-            return self._current_process.returncode is None
+            return self._current_process.poll() is None
         return False
 
 # 全局实例
