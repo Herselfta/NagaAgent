@@ -1,0 +1,68 @@
+{
+  "name": "WeatherTimeAgent",
+  "displayName": "天气时间Agent",
+  "version": "1.0.0",
+  "description": "支持今日天气查询、未来天气预报查询、时间查询，自动识别城市和IP，返回处理后的天气数据。",
+  "author": "Naga地理模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.agent_weather_time.agent_weather_time",
+    "class": "WeatherTimeAgent"
+  },
+  "factory": {
+    "create_instance": "create_weather_time_agent",
+    "validate_config": "validate_agent_config",
+    "get_dependencies": "get_agent_dependencies"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "today_weather",
+        "description": "查询今日天气信息，只返回今天的天气数据。\n- `tool_name`: today_weather/current_weather/today\n- `city`: 城市名（可传入具体城市，不传则使用本地城市）\n- `query`: 查询内容（可选）\n**返回格式:**\n```json\n{\"status\": \"ok\", \"message\": \"今日天气数据 - 查询城市: 城市名\", \"data\": {\"city\": \"城市名\", \"province\": \"省份\", \"reporttime\": \"报告时间\", \"today_weather\": {今日天气详情}}}\n```\n**调用示例:**\n```json\n{\"tool_name\": \"today_weather\", \"city\": \"北京\", \"query\": \"今天天气\"}```",
+        "example": "{\"tool_name\": \"today_weather\", \"city\": \"北京\", \"query\": \"今天天气\"}"
+      },
+      {
+        "command": "forecast_weather",
+        "description": "查询未来天气预报信息，返回未来3天预报数据（不包含今天）。\n- `tool_name`: forecast_weather/future_weather/forecast/weather_forecast\n- `city`: 城市名（可传入具体城市，不传则使用本地城市）\n- `query`: 查询内容（可选）\n**返回格式:**\n```json\n{\"status\": \"ok\", \"message\": \"未来天气预报数据 - 查询城市: 城市名\", \"data\": {\"city\": \"城市名\", \"province\": \"省份\", \"reporttime\": \"报告时间\", \"future_forecast\": [{未来3天天气详情}]}}\n```\n**调用示例:**\n```json\n{\"tool_name\": \"forecast_weather\", \"city\": \"北京\", \"query\": \"未来天气\"}```",
+        "example": "{\"tool_name\": \"forecast_weather\", \"city\": \"北京\", \"query\": \"未来天气\"}"
+      },
+      {
+        "command": "time",
+        "description": "查询时间信息，返回当前系统时间。\n- `tool_name`: time/get_time/current_time\n- `city`: 城市名（可选，自动识别）\n**返回格式:**\n```json\n{\"status\": \"ok\", \"message\": \"当前系统时间\", \"data\": {\"time\": \"2024-01-01 12:00:00\", \"city\": \"合肥\", \"province\": \"安徽\"}}\n```\n**调用示例:**\n```json\n{\"tool_name\": \"time\", \"city\": \"合肥\"}```",
+        "example": "{\"tool_name\": \"time\", \"city\": \"合肥\"}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "tool_name": {"type": "string", "description": "工具名称：today_weather/current_weather/today(今日天气) | forecast_weather/future_weather/forecast/weather_forecast(未来天气) | time/get_time/current_time(时间查询)"},
+      "city": {"type": "string", "description": "城市名（可选，LLM可传入具体城市，不传则使用本地城市，支持中文城市名）"},
+      "ip": {"type": "string", "description": "用户IP（可选，自动获取）"},
+      "query": {"type": "string", "description": "查询内容（可选）"},
+      "format": {"type": "string", "description": "格式类型（可选）"}
+    },
+    "required": ["tool_name"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "status": {"type": "string", "description": "状态：ok/error"},
+      "message": {"type": "string", "description": "消息描述"},
+      "data": {"type": "object", "description": "高德地图API原始JSON数据或时间信息"}
+    }
+  },
+  "configSchema": {
+    "WEATHER_AGENT_DEFAULT_CITY": "string"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 

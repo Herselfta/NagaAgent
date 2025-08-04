@@ -1,0 +1,79 @@
+{
+  "name": "ComicDownloaderAgent",
+  "displayName": "漫画下载Agent",
+  "version": "1.0.0",
+  "description": "支持漫画下载功能，默认保存到桌面，支持异步下载和状态查询。",
+  "author": "Naga下载模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.agent_comic_downloader.comic_downloader_agent",
+    "class": "ComicDownloaderAgent"
+  },
+  "factory": {
+    "create_instance": "create_comic_downloader_agent",
+    "validate_config": "validate_agent_config",
+    "get_dependencies": "get_agent_dependencies"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "download_comic",
+        "description": "下载指定ID的漫画到桌面。\n- `tool_name`: 固定为 `download_comic`\n- `album_id`: 漫画ID（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"download_comic\", \"album_id\": \"422866\"}```",
+        "example": "{\"tool_name\": \"download_comic\", \"album_id\": \"422866\"}"
+      },
+      {
+        "command": "get_download_status",
+        "description": "获取指定漫画的下载状态。\n- `tool_name`: 固定为 `get_download_status`\n- `album_id`: 漫画ID（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"get_download_status\", \"album_id\": \"422866\"}```",
+        "example": "{\"tool_name\": \"get_download_status\", \"album_id\": \"422866\"}"
+      },
+      {
+        "command": "cancel_download",
+        "description": "取消指定漫画的下载任务。\n- `tool_name`: 固定为 `cancel_download`\n- `album_id`: 漫画ID（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"cancel_download\", \"album_id\": \"422866\"}```",
+        "example": "{\"tool_name\": \"cancel_download\", \"album_id\": \"422866\"}"
+      },
+      {
+        "command": "get_all_status",
+        "description": "获取所有下载任务的状态。\n- `tool_name`: 固定为 `get_all_status`\n**调用示例:**\n```json\n{\"tool_name\": \"get_all_status\"}```",
+        "example": "{\"tool_name\": \"get_all_status\"}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "tool_name": {"type": "string", "description": "工具名称：download_comic/get_download_status/cancel_download/get_all_status"},
+      "album_id": {"type": "string", "description": "漫画ID（download_comic/get_download_status/cancel_download时必需）"}
+    },
+    "required": ["tool_name"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "success": {"type": "boolean", "description": "操作是否成功"},
+      "album_id": {"type": "string", "description": "漫画ID"},
+      "message": {"type": "string", "description": "操作结果描述"},
+      "album_title": {"type": "string", "description": "漫画标题"},
+      "album_author": {"type": "string", "description": "作者"},
+      "download_path": {"type": "string", "description": "下载路径"},
+      "error": {"type": "string", "description": "错误信息"},
+      "status": {"type": "string", "description": "下载状态"},
+      "progress": {"type": "integer", "description": "下载进度"}
+    }
+  },
+  "configSchema": {
+    "COMIC_DOWNLOADER_HOST": "string",
+    "COMIC_DOWNLOADER_PORT": "integer",
+    "COMIC_DOWNLOADER_PATH": "string",
+    "COMIC_DOWNLOADER_MAX_CONCURRENT": "integer"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 

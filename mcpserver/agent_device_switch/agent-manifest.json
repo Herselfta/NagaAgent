@@ -1,0 +1,57 @@
+{
+  "name": "agent_mqtt_tool",
+  "displayName": "设备开关控制Agent",
+  "version": "1.0.0",
+  "description": "通过物联网控制两个设备的开关，支持0/1状态控制。",
+  "author": "Naga物联网模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.agent_device_switch.agent_device_switch",
+    "class": "AgentMqttTool"
+  },
+  "factory": {
+    "create_instance": "create_device_switch_agent"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "switch_devices",
+        "description": "控制三个设备的开关状态。\n- `tool_name`: 固定为 `switch_devices`\n- `device1`: 设备1开关状态，0=关闭，1=开启（必需）\n- `device2`: 设备2开关状态，0=关闭，1=开启（必需）\n- `device3`: 设备3开关状态，0=关闭，1=开启（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"switch_devices\", \"device1\": 1, \"device2\": 0, \"device3\": 1}\n```",
+        "example": "{\"tool_name\": \"switch_devices\", \"device1\": 1, \"device2\": 0, \"device3\": 1}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "tool_name": {"type": "string", "description": "工具名称：switch_devices"},
+      "device1": {"type": "integer", "description": "设备1开关状态，0=关闭，1=开启（必需）"},
+      "device2": {"type": "integer", "description": "设备2开关状态，0=关闭，1=开启（必需）"},
+      "device3": {"type": "integer", "description": "设备3开关状态，0=关闭，1=开启（必需）"}
+    },
+    "required": ["tool_name", "device1", "device2", "device3"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "success": {"type": "boolean", "description": "操作是否成功"},
+      "message": {"type": "string", "description": "操作结果描述"},
+      "data": {"type": "object", "description": "返回数据，包含设备状态或连接信息"}
+    }
+  },
+  "configSchema": {
+    "MQTT_BROKER": "string",
+    "MQTT_PORT": "integer",
+    "MQTT_TOPIC": "string"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 

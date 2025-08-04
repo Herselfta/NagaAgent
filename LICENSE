@@ -1,0 +1,84 @@
+版权所有 (c) 2025 柏斯阔落
+
+特此免费授予任何个人或组织获得本软件及相关文档文件（"软件"）副本的权利，
+以不受限制地处理本软件，包括但不限于使用、复制、修改、合并、发布、分发、
+再许可和/或销售软件副本的权利，但须符合以下条件：
+
+1. 上述版权声明和本许可声明应包含在软件的所有副本或重要部分中。
+
+2. **开源要求：** 任何分发本软件或其重要部分（包括修改版本）的行为，
+   必须使软件在兼容本许可证的开源许可证下可用。源代码必须公开可访问，
+   并允许自由检查、修改和重新分发。
+
+3. **开源商业使用：** 允许商业使用本软件，前提是修改版本也以开源许可证发布，
+   且源代码公开可用。开源许可证必须允许他人自由使用、修改和分发代码。
+
+4. **非开源商业使用：** 如果您希望在不使修改版本开源的情况下将本软件用于商业目的，
+   您必须联系原作者柏斯阔落获得明确许可并协商适当条款。
+   未经授权且不开源修改的商业使用是被禁止的。
+
+5. **修改和衍生作品：** 本软件的所有修改或衍生版本在分发时，
+   必须在显著位置（如软件文档、关于框或用户界面页脚）保留原作者签名
+   和完整的版权声明，并清楚标明已进行修改。
+
+6. **商业使用定义：** 在本许可证中，"商业使用"定义为公司、开发团队、
+   正式机构或其他组织出于商业或营利目的使用软件。个人出于非营利
+   或个人目的的使用不构成商业使用。
+
+7. **联系信息：** 关于非开源商业使用的咨询，请联系原作者柏斯阔落，
+   通过适当渠道讨论许可条款并获得明确授权。
+
+本软件按"原样"提供，不提供任何明示或暗示的保证，包括但不限于对适销性、
+特定用途适用性和非侵权性的保证。在任何情况下，作者或版权持有人均不对
+任何索赔、损害或其他责任承担责任，无论是在合同诉讼、侵权诉讼或其他诉讼中，
+由软件或软件的使用或其他交易引起、产生或与之相关。
+
+---
+
+Copyright (c) 2025 柏斯阔落
+
+Permission is hereby granted, free of charge, to any person or organization obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, subject to the following conditions:
+
+1. The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
+
+2. **Open Source Requirement:** Any distribution of the Software, or any substantial 
+   portion thereof, including modified versions, must be made available under an open 
+   source license that is compatible with this License. The source code must be 
+   publicly accessible and freely available for inspection, modification, and redistribution.
+
+3. **Commercial Use with Open Source:** Commercial use of the Software is permitted 
+   provided that the modified version is also released under an open source license 
+   and the source code is made publicly available. The open source license must 
+   allow others to freely use, modify, and distribute the code.
+
+4. **Non-Open Source Commercial Use:** If you wish to use this Software for commercial 
+   purposes without making your modifications open source, you must contact the original 
+   author, 柏斯阔落, for explicit permission and negotiate appropriate terms. 
+   Unauthorized commercial use without open sourcing modifications is prohibited.
+
+5. **Modifications and Derivative Works:** All modified or derivative versions of 
+   the Software must, at the time of distribution, retain in a prominent location 
+   (such as in the software documentation, about box, or the footer of the user interface) 
+   the original author's signature and complete copyright notice, along with a clear 
+   indication that modifications have been made.
+
+6. **Definition of Commercial Use:** Within this License, "commercial use" is defined 
+   as the use of the Software by companies, development teams, formal institutions, 
+   or other organizations for business or profit-making purposes. Use by individual 
+   persons for non-profit or personal purposes does not constitute commercial use.
+
+7. **Contact Information:** For inquiries regarding non-open source commercial use, 
+   please contact the original author, 柏斯阔落, through appropriate channels to 
+   discuss licensing terms and obtain explicit authorization.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR 
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER 
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

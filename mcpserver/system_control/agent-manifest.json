@@ -1,0 +1,62 @@
+{
+  "name": "SystemControlAgent",
+  "displayName": "系统控制Agent",
+  "version": "1.0.0",
+  "description": "支持电脑控制：定时关机、定时重启、屏幕亮度调节、音量调节。",
+  "author": "Naga系统控制模块",
+  "agentType": "mcp",
+  "entryPoint": {
+    "module": "mcpserver.system_control.agent_system_control",
+    "class": "SystemControlAgent"
+  },
+  "factory": {
+    "create_instance": "create_system_control_agent"
+  },
+  "communication": {
+    "protocol": "stdio",
+    "timeout": 15000
+  },
+  "capabilities": {
+    "invocationCommands": [
+      {
+        "command": "shutdown",
+        "description": "定时关机。\n- `tool_name`: 固定为 `shutdown`\n- `time`: 定时关机秒数（可选，默认0立即）\n- `confirm`: 关机确认（Y/N，第二次调用时必需）\n**调用示例:**\n```json\n{\"tool_name\": \"shutdown\", \"time\": 60}```",
+        "example": "{\"tool_name\": \"shutdown\", \"time\": 60}"
+      },
+      {
+        "command": "restart",
+        "description": "定时重启。\n- `tool_name`: 固定为 `restart`\n- `time`: 定时重启秒数（可选，默认0立即）\n- `confirm`: 重启确认（Y/N，第二次调用时必需）\n**调用示例:**\n```json\n{\"tool_name\": \"restart\", \"time\": 60}```",
+        "example": "{\"tool_name\": \"restart\", \"time\": 60}"
+      },
+      {
+        "command": "set_brightness",
+        "description": "设置屏幕亮度。\n- `tool_name`: 固定为 `set_brightness`\n- `value`: 亮度值（0-100）\n**调用示例:**\n```json\n{\"tool_name\": \"set_brightness\", \"value\": 80}```",
+        "example": "{\"tool_name\": \"set_brightness\", \"value\": 80}"
+      },
+      {
+        "command": "set_volume",
+        "description": "设置系统音量。\n- `tool_name`: 固定为 `set_volume`\n- `value`: 音量值（0-100）\n**调用示例:**\n```json\n{\"tool_name\": \"set_volume\", \"value\": 50}```",
+        "example": "{\"tool_name\": \"set_volume\", \"value\": 50}"
+      }
+    ]
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "tool_name": {"type": "string", "description": "工具名称，如shutdown/restart/set_brightness/set_volume"},
+      "time": {"type": "integer", "description": "定时关机或重启秒数（shutdown/restart时可选）"},
+      "value": {"type": "integer", "description": "亮度或音量值（0-100，set_brightness/set_volume时必需）"},
+      "confirm": {"type": "string", "description": "关机或重启确认（Y/N，shutdown/restart第二次调用时必需）"}
+    },
+    "required": ["tool_name"]
+  },
+  "configSchema": {
+    "SYSTEM_CONTROL_AGENT_TIMEOUT": "integer"
+  },
+  "runtime": {
+    "instance": null,
+    "is_initialized": false,
+    "last_used": null,
+    "usage_count": 0
+  }
+} 
