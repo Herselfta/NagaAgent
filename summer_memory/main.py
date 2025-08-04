@@ -6,10 +6,10 @@ import logging
 import traceback
 import webbrowser
 
-from .extractor_ds_tri import extract_triples
-from .graph import store_triples
-from .visualize import visualize_triples
-from .rag_query_tri import query_knowledge, set_context
+from .quintuple_extractor import extract_quintuples
+from .quintuple_graph import store_quintuples
+from .quintuple_visualize import visualize_quintuples
+from .quintuple_rag_query import query_knowledge, set_context
 
 # 添加上级目录以导入 config.py
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -93,37 +93,37 @@ atexit.register(stop_neo4j_container)
 
 
 # --- 核心业务逻辑 ---
-def batch_add_texts(texts):# 批量处理文本，提取三元组并存储
+def batch_add_texts(texts):# 批量处理文本，提取五元组并存储
     try:
-        all_triples = set()
+        all_quintuples = set()
         for text in texts:
             if not text:
                 logger.warning("跳过空文本")
                 continue
             logger.info(f"处理文本: {text[:50]}...")
-            triples = extract_triples(text)
-            if not triples:
-                logger.warning(f"文本未提取到三元组: {text}")
+            quintuples = extract_quintuples(text)
+            if not quintuples:
+                logger.warning(f"文本未提取到五元组: {text}")
             else:
-                logger.info(f"提取到三元组: {triples}")
-            all_triples.update(triples)
+                logger.info(f"提取到五元组: {quintuples}")
+            all_quintuples.update(quintuples)
 
-        if not all_triples:
-            logger.warning("未提取到任何三元组")
+        if not all_quintuples:
+            logger.warning("未提取到任何五元组")
             return False
 
-        valid_triples = [
-            t for t in all_triples if all(t) and all(isinstance(x, str) and x.strip() for x in t)
+        valid_quintuples = [
+            t for t in all_quintuples if len(t) == 5 and all(isinstance(x, str) and x.strip() for x in t)
         ]
 
-        if len(valid_triples) < len(all_triples):
-            logger.warning(f"过滤掉 {len(all_triples) - len(valid_triples)} 个无效三元组")
+        if len(valid_quintuples) < len(all_quintuples):
+            logger.warning(f"过滤掉 {len(all_quintuples) - len(valid_quintuples)} 个无效五元组")
 
-        if not valid_triples:
-            logger.warning("无有效三元组")
+        if not valid_quintuples:
+            logger.warning("无有效五元组")
             return False
 
-        store_triples(valid_triples)
+        store_quintuples(valid_quintuples)
         set_context(texts)# 设置查询上下文
         return True
     except Exception as e:

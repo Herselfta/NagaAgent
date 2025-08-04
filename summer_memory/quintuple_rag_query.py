@@ -29,7 +29,7 @@ def query_knowledge(user_question):
     """使用 DeepSeek API 提取关键词并查询知识图谱"""
     context_str = "\n".join(recent_context) if recent_context else "无上下文"
     prompt = (
-        f"基于以下上下文和用户问题，提取与知识图谱相关的关键词（如实体、关系），"
+        f"基于以下上下文和用户问题，提取与知识图谱相关的关键词（如实体、关系、实体类型），"
         f"仅返回核心关键词，避免无关词。返回 JSON 格式的关键词列表：\n"
         f"上下文：\n{context_str}\n"
         f"问题：{user_question}\n"
@@ -58,7 +58,7 @@ def query_knowledge(user_question):
         body["format"] = "json"
         # 简化提示词，ollama会自动处理JSON格式
         simplified_prompt = (
-            f"基于以下上下文和用户问题，提取与知识图谱相关的关键词（如实体、关系），"
+            f"基于以下上下文和用户问题，提取与知识图谱相关的关键词（如实体、关系、实体类型），"
             f"仅返回核心关键词，避免无关词。直接返回关键词数组：\n"
             f"上下文：\n{context_str}\n"
             f"问题：{user_question}"
@@ -91,15 +91,15 @@ def query_knowledge(user_question):
             return "未找到相关关键词，请提供更具体的问题。"
 
         logger.info(f"提取关键词: {keywords}")
-        from .graph import query_graph_by_keywords
-        triples = query_graph_by_keywords(keywords)
-        if not triples:
-            logger.info(f"未找到相关三元组: {keywords}")
+        from .quintuple_graph import query_graph_by_keywords
+        quintuples = query_graph_by_keywords(keywords)
+        if not quintuples:
+            logger.info(f"未找到相关五元组: {keywords}")
             return "未在知识图谱中找到相关信息。"
 
         answer = "我在知识图谱中找到以下相关信息：\n\n"
-        for h, r, t in triples:
-            answer += f"- {h} —[{r}]→ {t}\n"
+        for h, h_type, r, t, t_type in quintuples:
+            answer += f"- {h}({h_type}) —[{r}]→ {t}({t_type})\n"
         return answer
 
     except requests.exceptions.HTTPError as e:

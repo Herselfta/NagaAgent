@@ -47,62 +47,51 @@ except Exception as e:
         GRAG_ENABLED = False
 
 logger = logging.getLogger(__name__)
-TRIPLES_FILE = "triples.json"
+QUINTUPLES_FILE = "quintuples.json"  # 修改文件名以反映五元组
 
 
-def load_triples():
+def load_quintuples():
     try:
-        with open(TRIPLES_FILE, 'r', encoding='utf-8') as f:
+        with open(QUINTUPLES_FILE, 'r', encoding='utf-8') as f:
             return set(tuple(t) for t in _json.load(f))
     except FileNotFoundError:
         return set()
 
 
-def save_triples(triples):
-    with open(TRIPLES_FILE, 'w', encoding='utf-8') as f:
-        _json.dump(list(triples), f, ensure_ascii=False, indent=2)
+def save_quintuples(quintuples):
+    with open(QUINTUPLES_FILE, 'w', encoding='utf-8') as f:
+        _json.dump(list(quintuples), f, ensure_ascii=False, indent=2)
 
 
-def store_triples(new_triples) -> bool:
-    """存储三元组到文件和Neo4j，返回是否成功"""
-    try:
-        # 1. 保存到本地文件
-        all_triples = load_triples()
-        all_triples.update(new_triples)
-        save_triples(all_triples)
+def store_quintuples(new_quintuples):
+    all_quintuples = load_quintuples()
+    all_quintuples.update(new_quintuples)  # 集合自动去重
 
-        # 2. 存储到Neo4j（如果启用）
-        if graph is not None:
-            success_count = 0
-            for head, rel, tail in new_triples:
-                if not head or not tail:
-                    logger.warning(f"跳过无效三元组，head或tail为空: {(head, rel, tail)}")
-                    continue
+    # 持久化到文件
+    save_quintuples(all_quintuples)
 
-                try:
-                    h_node = Node("Entity", name=head)
-                    t_node = Node("Entity", name=tail)
-                    r = Relationship(h_node, rel, t_node)
-
-                    graph.merge(h_node, "Entity", "name")
-                    graph.merge(t_node, "Entity", "name")
-                    graph.merge(r)
-                    success_count += 1
-                except Exception as e:
-                    logger.error(f"存储三元组失败: {head}-{rel}-{tail}, 错误: {e}")
-
-            logger.info(f"成功存储 {success_count}/{len(new_triples)} 个三元组到Neo4j")
-            return success_count > 0  # 只要有成功存储的就返回True
-        else:
-            logger.info(f"跳过Neo4j存储（未启用），保存 {len(new_triples)} 个三元组到文件")
-            return True  # 文件存储成功也算成功
-    except Exception as e:
-        logger.error(f"存储三元组失败: {e}")
-        return False
+    # 同步更新Neo4j图谱数据库（仅在GRAG_ENABLED时）
+    if graph is not None:
+        for head, head_type, rel, tail, tail_type in new_quintuples:
+            if not head or not tail:
+                logger.warning(f"跳过无效五元组，head或tail为空: {(head, head_type, rel, tail, tail_type)}")
+                continue
+            
+            # 创建带类型的节点
+            h_node = Node("Entity", name=head, entity_type=head_type)
+            t_node = Node("Entity", name=tail, entity_type=tail_type)
+            
+            # 创建关系，保存主体和客体类型信息
+            r = Relationship(h_node, rel, t_node, head_type=head_type, tail_type=tail_type)
+            
+            # 合并节点时使用name和entity_type作为唯一标识
+            graph.merge(h_node, "Entity", "name")
+            graph.merge(t_node, "Entity", "name")
+            graph.merge(r)
 
 
-def get_all_triples():
-    return load_triples()
+def get_all_quintuples():
+    return load_quintuples()
 
 
 def query_graph_by_keywords(keywords):
@@ -112,10 +101,17 @@ def query_graph_by_keywords(keywords):
             query = f"""
             MATCH (e1:Entity)-[r]->(e2:Entity)
             WHERE e1.name CONTAINS '{kw}' OR e2.name CONTAINS '{kw}' OR type(r) CONTAINS '{kw}'
-            RETURN e1.name, type(r), e2.name
+               OR e1.entity_type CONTAINS '{kw}' OR e2.entity_type CONTAINS '{kw}'
+            RETURN e1.name, e1.entity_type, type(r), e2.name, e2.entity_type
             LIMIT 5
             """
             res = graph.run(query).data()
             for record in res:
-                results.append((record['e1.name'], record['type(r)'], record['e2.name']))
+                results.append((
+                    record['e1.name'], 
+                    record['e1.entity_type'],
+                    record['type(r)'], 
+                    record['e2.name'],
+                    record['e2.entity_type']
+                ))
     return results

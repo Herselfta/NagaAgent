@@ -1,6 +1,6 @@
-# 🧠 中文三元组知识图谱构建与可视化系统
+# 🧠 中文五元组知识图谱构建与可视化系统
 
-本项目通过接入 DeepSeek API 实现中文文本的三元组抽取，并借助 Neo4j 构建实体关系图谱，同时使用 PyVis 实现知识图谱的可视化展示与交互式查询。
+本项目通过接入 DeepSeek API 实现中文文本的五元组抽取，并借助 Neo4j 构建实体关系图谱，同时使用 PyVis 实现知识图谱的可视化展示与交互式查询。
 
 ---
 
@@ -8,12 +8,12 @@
 
 ```
 .
-├── main_tri.py              # 主程序入口，负责流程调度、用户交互
-├── extractor_ds_tri.py     # 使用 DeepSeek API 进行三元组抽取
-├── graph.py                # 操作 Neo4j，存储与查询三元组
-├── visualize.py            # 使用 PyVis 生成 graph.html 知识图谱可视化页面
-├── rag_query_tri.py        # 使用 DeepSeek 提取关键词并在图谱中检索答案
-├── triples.json            # 持久化的三元组缓存文件
+├── main.py                 # 主程序入口，负责流程调度、用户交互
+├── quintuple_extractor.py  # 使用 DeepSeek API 进行五元组抽取
+├── quintuple_graph.py      # 操作 Neo4j，存储与查询五元组
+├── quintuple_visualize.py  # 使用 PyVis 生成 graph.html 知识图谱可视化页面
+├── quintuple_rag_query.py  # 使用 DeepSeek 提取关键词并在图谱中检索答案
+├── quintuples.json         # 持久化的五元组缓存文件
 ├── graph.html              # 可视化结果文件，自动生成
 └── README.md               # 项目说明文档
 ```
@@ -64,7 +64,7 @@ GRAG_NEO4J_DATABASE = "neo4j"             # 数据库名
 
 ### 4. 设置 DeepSeek API Key
 
-在 `extractor_ds_tri.py` 和 `rag_query_tri.py` 中替换：
+在 `quintuple_extractor.py` 和 `quintuple_rag_query.py` 中替换：
 
 API_KEY = "sk-xxx"  # 替换为你自己的 DeepSeek API 密钥
 
@@ -76,7 +76,7 @@ API_KEY = "sk-xxx"  # 替换为你自己的 DeepSeek API 密钥
 
 ### 方法一：运行主程序
 
-python main_tri.py
+python main.py
 
 程序将提示你选择输入方式：
 请选择输入方式：
@@ -128,16 +128,16 @@ batch_add_texts(texts)
 小红在教室里看书。
 小明和小强是好朋友。
 
-**生成三元组：**
+**生成五元组：**
 
 [
-  ["小红", "看", "书"],
-  ["小明", "是", "好朋友"],
-  ["小强", "是", "好朋友"]
+  ["小红", "人物", "看", "书", "物品"],
+  ["小明", "人物", "是", "好朋友", "关系"],
+  ["小强", "人物", "是", "好朋友", "关系"]
 ]
 
 **可视化图谱：**
 
-- 小红 —[看]→ 书  
-- 小明 —[是]→ 好朋友  
-- 小强 —[是]→ 好朋友  
+- 小红(人物) —[看]→ 书(物品)  
+- 小明(人物) —[是]→ 好朋友(关系)  
+- 小强(人物) —[是]→ 好朋友(关系)  
