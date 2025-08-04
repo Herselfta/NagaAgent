@@ -33,7 +33,7 @@ class GRAGMemoryManager:
             self.enabled = False
 
     async def add_conversation_memory(self, user_input: str, ai_response: str) -> bool:
-        """添加对话记忆到知识图谱（同时更新上下文和三元组）"""
+        """添加对话记忆到知识图谱（同时更新上下文和五元组）"""
         if not self.enabled:
             return False
         try:

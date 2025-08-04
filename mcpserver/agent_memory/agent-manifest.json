@@ -1,8 +1,8 @@
 {
   "name": "MemoryAgent",
-  "displayName": "记忆三元组Agent",
+  "displayName": "记忆五元组Agent",
   "version": "1.0.0",
-  "description": "支持三元组知识图谱的回忆与查询。",
+  "description": "支持五元组知识图谱的回忆与查询。",
   "author": "Naga记忆模块",
   "agentType": "mcp",
   "entryPoint": {
@@ -20,7 +20,7 @@
     "invocationCommands": [
       {
         "command": "recall",
-        "description": "根据用户问题查询知识图谱三元组，返回相关记忆内容。\n- `tool_name`: 固定为 `recall`\n- `query`: 查询内容（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"recall\", \"query\": \"西藏的雪山\"}\n```",
+        "description": "根据用户问题查询知识图谱五元组，返回相关记忆内容。\n- `tool_name`: 固定为 `recall`\n- `query`: 查询内容（必需）\n**调用示例:**\n```json\n{\"tool_name\": \"recall\", \"query\": \"西藏的雪山\"}\n```",
         "example": "{\"tool_name\": \"recall\", \"query\": \"西藏的雪山\"}"
       }
     ]

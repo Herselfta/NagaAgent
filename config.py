@@ -101,7 +101,7 @@ class APIServerConfig(BaseModel):
 class GRAGConfig(BaseModel):
     """GRAG知识图谱记忆系统配置"""
     enabled: bool = Field(default=False, description="是否启用GRAG记忆系统")  # 关闭GRAG记忆系统
-    auto_extract: bool = Field(default=False, description="是否自动提取对话中的三元组")  # 关闭三元组提取
+    auto_extract: bool = Field(default=False, description="是否自动提取对话中的五元组")  # 关闭五元组提取
     context_length: int = Field(default=5, ge=1, le=20, description="记忆上下文长度")
     similarity_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="记忆检索相似度阈值")
     neo4j_uri: str = Field(default="neo4j://127.0.0.1:7687", description="Neo4j连接URI")
