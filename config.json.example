@@ -10,12 +10,18 @@
 
   // API配置（LLM接口）
   "api": {
-    "api_key": "your-api-key-here",      // LLM API密钥
-    "base_url": "https://api.deepseek.com/v1",  // API基础URL
+    "deepseek_api_key": "your-deepseek-api-key-here", // DeepSeek API密钥
+    "deepseek_base_url": "https://api.deepseek.com/v1",  // DeepSeek API基础URL
     "model": "deepseek-chat",            // 使用的模型名称
     "temperature": 0.7,                  // 温度参数（0.0-1.0，控制随机性）
     "max_tokens": 2000,                  // 最大输出token数
     "max_history_rounds": 10             // 最大历史对话轮数
+  },
+
+  // Google Gemini API 配置
+  "gemini": {
+    "api_key": "your-gemini-api-key-here", // Google Gemini API 密钥
+    "model": "gemini-1.5-flash"            // 使用的Gemini模型名称
   },
 
   // API服务器配置
@@ -91,12 +97,5 @@
     "mac_btn_margin": 16,                // Mac按钮边距
     "mac_btn_gap": 12,                   // Mac按钮间距
     "animation_duration": 600            // 动画持续时间（毫秒）
-  },
-
-  // 娜迦官网配置
-  "naga_portal": {
-    "portal_url": "https://naga.furina.chat/",  // 娜迦官网地址
-    "username": "your-username",                // 娜迦官网用户名
-    "password": "your-password"                 // 娜迦官网密码
   }
 }

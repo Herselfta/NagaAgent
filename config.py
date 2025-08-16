@@ -1,4 +1,4 @@
-﻿# config.py - Pydantic配置系统
+# config.py - Pydantic配置系统
 """
 NagaAgent 配置系统 - 基于Pydantic实现类型安全和验证
 """
@@ -62,8 +62,19 @@ class SystemConfig(BaseModel):
 
 class APIConfig(BaseModel):
     """API服务配置"""
-    api_key: str = Field(default="sk-placeholder-key-not-set", description="API密钥")
-    base_url: str = Field(default="https://api.deepseek.com/v1", description="API基础URL")
+    provider: str = Field(default="deepseek", description="API提供商 (deepseek, openai, gemini)")
+    
+    # DeepSeek 配置
+    deepseek_api_key: str = Field(default="sk-placeholder-key-not-set", description="DeepSeek API密钥")
+    deepseek_base_url: str = Field(default="https://api.deepseek.com/v1", description="DeepSeek API基础URL")
+
+    # OpenAI 配置
+    openai_api_key: str = Field(default="sk-placeholder-key-not-set", description="OpenAI API密钥")
+    openai_base_url: str = Field(default="https://api.openai.com/v1", description="OpenAI API基础URL")
+
+    # Gemini 配置 (注意: Gemini通常不需要base_url)
+    gemini_api_key: str = Field(default="your-gemini-api-key-here", description="Gemini API密钥")
+
     model: str = Field(default="deepseek-chat", description="使用的模型名称")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度参数")
     max_tokens: int = Field(default=2000, ge=1, le=8192, description="最大token数")
@@ -73,10 +84,18 @@ class APIConfig(BaseModel):
     timeout: Optional[int] = Field(default=None, ge=1, le=300, description="请求超时时间")
     retry_count: Optional[int] = Field(default=None, ge=0, le=10, description="重试次数")
 
-    @field_validator('api_key')
+    def get_api_key(self) -> Optional[str]:
+        """根据提供商获取API密钥"""
+        return getattr(self, f"{self.provider}_api_key", None)
+
+    def get_base_url(self) -> Optional[str]:
+        """根据提供商获取API基础URL"""
+        return getattr(self, f"{self.provider}_base_url", None)
+
+    @field_validator('deepseek_api_key', 'openai_api_key', 'gemini_api_key')
     @classmethod
     def validate_api_key(cls, v):
-        if v and v != "sk-placeholder-key-not-set":
+        if v and "placeholder" not in v and "your-gemini-api-key-here" not in v:
             try:
                 v.encode('ascii')
             except UnicodeEncodeError:
@@ -225,28 +244,49 @@ class BrowserConfig(BaseModel):
         return None
 
 
+class GPTSovitsConfig(BaseModel):
+    """GPT-SoVITS专属配置"""
+    ref_audio_path: str = Field(
+        default="E:/GPT-SoVITS-v4-20250422-nvidia50/参考音频/AAA大黑塔/中/艾丝妲是个优秀的管理者，换个本事差的人，十个空间站都不够天才们糟蹋。.mp3",
+        description="主要参考音频路径"
+    )
+    prompt_text: str = Field(
+        default="艾丝妲是个优秀的管理者，换个本事差的人，十个空间站都不够天才们糟蹋。",
+        description="参考音频的提示文本"
+    )
+    prompt_lang: str = Field(default="zh", description="提示文本语言")
+    text_lang: str = Field(default="zh", description="合成文本语言")
+    text_split_method: str = Field(default="cut1", description="文本切分方法")
+    batch_size: int = Field(default=10, description="批处理大小")
+    temperature: float = Field(default=1.0, description="温度")
+    top_p: float = Field(default=1.0, description="Top P")
+    top_k: int = Field(default=5, description="Top K")
+
+
 class TTSConfig(BaseModel):
     """TTS服务配置"""
     api_key: str = Field(default="your_api_key_here", description="TTS服务API密钥")
-    port: int = Field(default=5048, ge=1, le=65535, description="TTS服务端口")
-    default_voice: str = Field(default="zh-CN-XiaoxiaoNeural", description="默认语音")
-    default_format: str = Field(default="mp3", description="默认音频格式")
+    port: int = Field(default=9880, ge=1, le=65535, description="TTS服务端口")
+    default_voice: str = Field(default="zh-CN-XiaoxiaoNeural", description="默认语音（在gpt_sovits模式下无效）")
+    default_format: str = Field(default="wav", description="默认音频格式（gpt_sovits推荐wav）")
     default_speed: float = Field(default=1.0, ge=0.1, le=3.0, description="默认语速")
     default_language: str = Field(default="zh-CN", description="默认语言")
     remove_filter: bool = Field(default=False, description="是否移除过滤")
     expand_api: bool = Field(default=True, description="是否扩展API")
     require_api_key: bool = Field(default=False, description="是否需要API密钥")
     
-    # 新增配置项
-    provider: str = Field(default="edgetts", description="TTS提供商(edgetts/minimax)")
-    group_id: str = Field(default="your_minimax_group_id_here", description="Minimax的group_id")
-    tts_model: str = Field(default="speech-02-hd", description="TTS模型名称")
-    emotion: str = Field(default="neutral", description="情感参数")
-    minimax_emotion: str = Field(default="neutral", description="Minimax情感参数")
+    # 服务提供商切换
+    provider: str = Field(default="gpt_sovits", description="TTS提供商(edgetts/gpt_sovits)")
+    
+    # gpt-sovits专属配置
+    gpt_sovits: Optional[GPTSovitsConfig] = Field(default_factory=GPTSovitsConfig, description="GPT-SoVITS专属配置")
+
+    # EdgeTTS/Minimax 旧有配置
+    group_id: Optional[str] = Field(default="your_minimax_group_id_here", description="Minimax的group_id")
+    tts_model: Optional[str] = Field(default="speech-02-hd", description="TTS模型名称")
+    emotion: Optional[str] = Field(default="neutral", description="情感参数")
+    minimax_emotion: Optional[str] = Field(default="neutral", description="Minimax情感参数")
     keep_audio_files: bool = Field(default=False, description="是否保留音频文件用于调试")
-
-
-
 
 
 class FilterConfig(BaseModel):
@@ -287,7 +327,7 @@ class DifficultyConfig(BaseModel):
 class ScoringConfig(BaseModel):
     """黑白名单打分系统配置"""
     enabled: bool = Field(default=False, description="是否启用打分系统")  # 关闭打分系统
-    score_range: List[int] = Field(default=[1, 5], description="评分范围")
+    score_range: List[int] = Field(default=[1, 5],description="评分范围")
     score_threshold: int = Field(default=2, ge=1, le=5, description="结果保留阈值")
     similarity_threshold: float = Field(default=0.85, ge=0.0, le=1.0, description="相似结果识别阈值")
     max_user_preferences: int = Field(default=3, ge=1, le=10, description="用户最多选择偏好数")
@@ -374,6 +414,12 @@ class UIConfig(BaseModel):
         return os.getenv('COMPUTERNAME') or os.getenv('USERNAME') or "用户"
 
 
+class GeminiConfig(BaseModel):
+    """Google Gemini API 配置"""
+    api_key: str = Field(default="", description="Google Gemini API 密钥")
+    model: str = Field(default="gemini-1.5-flash", description="使用的Gemini模型名称")
+
+
 class SystemPrompts(BaseModel):
     """系统提示词配置"""
     naga_system_prompt: str = Field(
@@ -458,6 +504,7 @@ class NagaConfig(BaseModel):
     mqtt: MQTTConfig = Field(default_factory=MQTTConfig)
     weather: WeatherConfig = Field(default_factory=WeatherConfig)
     naga_portal: NagaPortalConfig = Field(default_factory=NagaPortalConfig)
+    gemini: GeminiConfig = Field(default_factory=GeminiConfig)
 
     model_config = {
         "extra": "ignore"
@@ -472,9 +519,10 @@ class NagaConfig(BaseModel):
         self.system.log_dir.mkdir(exist_ok=True)
 
         # API密钥验证和警告
-        if not self.api.api_key or self.api.api_key == "sk-placeholder-key-not-set":
-            print("警告：API密钥未配置")
-            print("请在 config.json 文件中设置正确的 api.api_key 值")
+        api_key = self.api.get_api_key()
+        if not api_key or "placeholder" in api_key or "your-gemini-api-key-here" in api_key:
+            print(f"警告：{self.api.provider} 的API密钥未配置")
+            print(f"请在 config.json 文件中为 'api.{self.api.provider}_api_key' 设置正确的值")
 
 
 
@@ -552,83 +600,89 @@ def load_config():
 config = load_config()
 
 # 为了兼容旧版本代码，提供所有旧变量名的映射
-NAGA_VERSION = config.system.version
-VOICE_ENABLED = config.system.voice_enabled
-BASE_DIR = config.system.base_dir
-LOG_DIR = config.system.log_dir
-STREAM_MODE = config.system.stream_mode
-DEBUG = config.system.debug
-LOG_LEVEL = config.system.log_level
+# 警告：这些旧的全局变量将在未来版本中被移除，请直接使用config对象
+# 例如: from config import config; print(config.system.version)
+# NAGA_VERSION = config.system.version
+# VOICE_ENABLED = config.system.voice_enabled
+# BASE_DIR = config.system.base_dir
+# LOG_DIR = config.system.log_dir
+# STREAM_MODE = config.system.stream_mode
+# DEBUG = config.system.debug
+# LOG_LEVEL = config.system.log_level
 
-API_KEY = config.api.api_key
-BASE_URL = config.api.base_url
-MODEL = config.api.model
-MODEL_NAME = config.api.model_name
-TEMPERATURE = config.api.temperature
-MAX_TOKENS = config.api.max_tokens
-MAX_HISTORY_ROUNDS = config.api.max_history_rounds
+# API_KEY = config.api.deepseek_api_key
+# BASE_URL = config.api.deepseek_base_url
+# MODEL = config.api.model
+# MODEL_NAME = config.api.model_name
+# TEMPERATURE = config.api.temperature
+# MAX_TOKENS = config.api.max_tokens
+# MAX_HISTORY_ROUNDS = config.api.max_history_rounds
 
-API_SERVER_ENABLED = config.api_server.enabled
-API_SERVER_HOST = config.api_server.host
-API_SERVER_PORT = config.api_server.port
-API_SERVER_AUTO_START = config.api_server.auto_start
-API_SERVER_DOCS_ENABLED = config.api_server.docs_enabled
+# API_SERVER_ENABLED = config.api_server.enabled
+# API_SERVER_HOST = config.api_server.host
+# API_SERVER_PORT = config.api_server.port
+# API_SERVER_AUTO_START = config.api_server.auto_start
+# API_SERVER_DOCS_ENABLED = config.api_server.docs_enabled
 
-GRAG_ENABLED = config.grag.enabled
-GRAG_AUTO_EXTRACT = config.grag.auto_extract
-GRAG_CONTEXT_LENGTH = config.grag.context_length
-GRAG_SIMILARITY_THRESHOLD = config.grag.similarity_threshold
-GRAG_NEO4J_URI = config.grag.neo4j_uri
-GRAG_NEO4J_USER = config.grag.neo4j_user
-GRAG_NEO4J_PASSWORD = config.grag.neo4j_password
-GRAG_NEO4J_DATABASE = config.grag.neo4j_database
+# GRAG_ENABLED = config.grag.enabled
+# GRAG_AUTO_EXTRACT = config.grag.auto_extract
+# GRAG_CONTEXT_LENGTH = config.grag.context_length
+# GRAG_SIMILARITY_THRESHOLD = config.grag.similarity_threshold
+# GRAG_NEO4J_URI = config.grag.neo4j_uri
+# GRAG_NEO4J_USER = config.grag.neo4j_user
+# GRAG_NEO4J_PASSWORD = config.grag.neo4j_password
+# GRAG_NEO4J_DATABASE = config.grag.neo4j_database
 
-MAX_handoff_LOOP_STREAM = config.handoff.max_loop_stream
-MAX_handoff_LOOP_NON_STREAM = config.handoff.max_loop_non_stream
-SHOW_handoff_OUTPUT = config.handoff.show_output
+# MAX_handoff_LOOP_STREAM = config.handoff.max_loop_stream
+# MAX_handoff_LOOP_NON_STREAM = config.handoff.max_loop_non_stream
+# SHOW_handoff_OUTPUT = config.handoff.show_output
 
-BROWSER_PATH = config.browser.path
-PLAYWRIGHT_HEADLESS = config.browser.playwright_headless
+# BROWSER_PATH = config.browser.path
+# PLAYWRIGHT_HEADLESS = config.browser.playwright_headless
 
-TTS_API_KEY = config.tts.api_key
-TTS_PORT = config.tts.port
-TTS_DEFAULT_VOICE = config.tts.default_voice
-TTS_DEFAULT_FORMAT = config.tts.default_format
-TTS_DEFAULT_SPEED = config.tts.default_speed
-TTS_DEFAULT_LANGUAGE = config.tts.default_language
+# TTS_API_KEY = config.tts.api_key
+# TTS_PORT = config.tts.port
+# TTS_DEFAULT_VOICE = config.tts.default_voice
+# TTS_DEFAULT_FORMAT = config.tts.default_format
+# TTS_DEFAULT_SPEED = config.tts.default_speed
+# TTS_DEFAULT_LANGUAGE = config.tts.default_language
 
 
 
-# MQTT配置兼容性变量
-MQTT_ENABLED = config.mqtt.enabled
-MQTT_BROKER = config.mqtt.broker
-MQTT_PORT = config.mqtt.port
-MQTT_TOPIC = config.mqtt.topic
-MQTT_CLIENT_ID = config.mqtt.client_id
-MQTT_USERNAME = config.mqtt.username
-MQTT_PASSWORD = config.mqtt.password
-MQTT_KEEPALIVE = config.mqtt.keepalive
-MQTT_QOS = config.mqtt.qos
+# # MQTT配置兼容性变量
+# MQTT_ENABLED = config.mqtt.enabled
+# MQTT_BROKER = config.mqtt.broker
+# MQTT_PORT = config.mqtt.port
+# MQTT_TOPIC = config.mqtt.topic
+# MQTT_CLIENT_ID = config.mqtt.client_id
+# MQTT_USERNAME = config.mqtt.username
+# MQTT_PASSWORD = config.mqtt.password
+# MQTT_KEEPALIVE = config.mqtt.keepalive
+# MQTT_QOS = config.mqtt.qos
 
-# 天气配置兼容性变量
-WEATHER_API_KEY = config.weather.api_key
+# # 天气配置兼容性变量
+# WEATHER_API_KEY = config.weather.api_key
 
-# 配置字典，兼容旧版本
-OUTPUT_FILTER_CONFIG = config.output_filter_config_dict
-DIFFICULTY_JUDGMENT_CONFIG = config.difficulty_judgment_config_dict
-SCORING_SYSTEM_CONFIG = config.scoring_system_config_dict
-THINKING_COMPLETENESS_CONFIG = config.thinking_completeness_config_dict
+# # Gemini配置
+# GEMINI_API_KEY = config.gemini.api_key
+# DEEPSEEK_BASE_URL = config.api.deepseek_base_url
 
-# MCP配置兼容性变量
-MCP_AGENT_TOOL_NAME = config.mcp.agent_tool_name
-MCP_AGENT_PRIORITY = config.mcp.agent_priority
-MCP_AUTO_DISCOVER_AGENTS = config.mcp.auto_discover_agents
-MCP_AUTO_DISCOVER_MCP = config.mcp.auto_discover_mcp
-MCP_EXCLUDE_AGENT_TOOLS_FROM_MCP = config.mcp.exclude_agent_tools_from_mcp
+# # 配置字典，兼容旧版本
+# OUTPUT_FILTER_CONFIG = config.output_filter_config_dict
+# DIFFICULTY_JUDGMENT_CONFIG = config.difficulty_judgment_config_dict
+# SCORING_SYSTEM_CONFIG = config.scoring_system_config_dict
+# THINKING_COMPLETENESS_CONFIG = config.thinking_completeness_config_dict
 
-# 系统提示词
-NAGA_SYSTEM_PROMPT = config.prompts.naga_system_prompt
-NEXT_QUESTION_SYSTEM_PROMPT = config.prompts.next_question_prompt
+# # MCP配置兼容性变量
+# MCP_AGENT_TOOL_NAME = config.mcp.agent_tool_name
+# MCP_AGENT_PRIORITY = config.mcp.agent_priority
+# MCP_AUTO_DISCOVER_AGENTS = config.mcp.auto_discover_agents
+# MCP_AUTO_DISCOVER_MCP = config.mcp.auto_discover_mcp
+# MCP_EXCLUDE_AGENT_TOOLS_FROM_MCP = config.mcp.exclude_agent_tools_from_mcp
+
+# # 系统提示词
+# NAGA_SYSTEM_PROMPT = config.prompts.naga_system_prompt
+# NEXT_QUESTION_SYSTEM_PROMPT = config.prompts.next_question_prompt
 
 # 工具函数
 def get_current_date() -> str:

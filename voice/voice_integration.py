@@ -33,8 +33,11 @@ class VoiceIntegration:
     """语音集成模块 - 重构版本：真正的异步处理"""
     
     def __init__(self):
-        self.provider = 'edge_tts'  # 默认使用Edge TTS
-        self.tts_url = f"http://127.0.0.1:{config.tts.port}/v1/audio/speech"
+        self.provider = config.tts.provider
+        if self.provider == 'gpt_sovits':
+            self.tts_url = f"http://127.0.0.1:{config.tts.port}/tts"
+        else:
+            self.tts_url = f"http://127.0.0.1:{config.tts.port}/v1/audio/speech"
         
         # 音频播放配置
         self.min_sentence_length = 5  # 最小句子长度
@@ -163,12 +166,30 @@ class VoiceIntegration:
             if config.tts.require_api_key:
                 headers["Authorization"] = f"Bearer {config.tts.api_key}"
             
-            payload = {
-                "input": text,
-                "voice": config.tts.default_voice,
-                "response_format": config.tts.default_format,
-                "speed": config.tts.default_speed
-            }
+            if self.provider == 'gpt_sovits':
+                sovits_config = config.tts.gpt_sovits
+                payload = {
+                    "text": text,
+                    "text_lang": sovits_config.text_lang,
+                    "ref_audio_path": sovits_config.ref_audio_path,
+                    "prompt_text": sovits_config.prompt_text,
+                    "prompt_lang": sovits_config.prompt_lang,
+                    "top_k": sovits_config.top_k,
+                    "top_p": sovits_config.top_p,
+                    "temperature": sovits_config.temperature,
+                    "text_split_method": sovits_config.text_split_method,
+                    "batch_size": sovits_config.batch_size,
+                    "speed_factor": config.tts.default_speed,
+                    "media_type": config.tts.default_format,
+                    "streaming_mode": True,
+                }
+            else:
+                payload = {
+                    "input": text,
+                    "voice": config.tts.default_voice,
+                    "response_format": config.tts.default_format,
+                    "speed": config.tts.default_speed
+                }
             
             # 使用requests进行同步调用
             import requests

@@ -63,7 +63,7 @@ sounddevice>=0.4.6
 soundfile>=0.12.1
 pyaudio>=0.2.14
 edge-tts>=7.0.2
-emoji>=2.8.0
+emoji>=2.14.1
 
 # 系统托盘相关依赖
 pystray>=0.19.4

@@ -11,7 +11,8 @@ from datetime import datetime
 from typing import List, Dict
 
 # 第三方库导入
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI
+import google.generativeai as genai
 
 # 本地模块导入
 from apiserver.tool_call_utils import parse_tool_calls, execute_tool_calls, tool_call_loop
@@ -77,9 +78,12 @@ class NagaConversation: # 对话主类
         self.mcp = get_mcp_manager()
         self.messages = []
         self.dev_mode = False
-        self.client = OpenAI(api_key=config.api.api_key, base_url=config.api.base_url.rstrip('/') + '/')
-        self.async_client = AsyncOpenAI(api_key=config.api.api_key, base_url=config.api.base_url.rstrip('/') + '/')
-        
+        self.api_client = None
+        self.provider = config.api.provider
+
+        # API client will be initialized on-demand in the process method
+        # self._initialize_api_client()
+
         # 初始化MCP服务系统
         self._init_mcp_services()
         
@@ -93,9 +97,6 @@ class NagaConversation: # 对话主类
         self.voice = None
         if config.system.voice_enabled:
             try:
-                # 语音功能已迁移到voice_integration.py，由ui/enhanced_worker.py调用
-                # 不再需要在这里初始化VoiceHandler
-                # 使用全局变量避免重复输出日志
                 if not SystemState._voice_enabled_logged:
                     logger.info("语音功能已启用，由UI层管理")
                     SystemState._voice_enabled_logged = True
@@ -103,26 +104,50 @@ class NagaConversation: # 对话主类
                 logger.warning(f"语音系统初始化失败: {e}")
                 self.voice = None
         
-        # 禁用树状思考系统
-        self.tree_thinking = None
-        # 注释掉树状思考系统初始化
-        # if not SystemState._tree_thinking_initialized:
-        #     try:
-        #         self.tree_thinking = TreeThinkingEngine(api_client=self, memory_manager=self.memory_manager)
-        #         print("[TreeThinkingEngine] ✅ 树状外置思考系统初始化成功")
-        #         SystemState._tree_thinking_initialized = True
-        #     except Exception as e:
-        #         logger.warning(f"树状思考系统初始化失败: {e}")
-        #         self.tree_thinking = None
-        # else:
-        #     # 如果子系统已经初始化过，创建新实例但不重新初始化子系统（静默处理）
-        #     try:
-        #         self.tree_thinking = TreeThinkingEngine(api_client=self, memory_manager=self.memory_manager)
-        #     except Exception as e:
-        #         logger.warning(f"树状思考系统实例创建失败: {e}")
-        #         self.tree_thinking = None
+        # Do not get loop in constructor, it binds to the wrong thread
+        # self.loop = asyncio.get_event_loop()
 
-        self.loop = asyncio.get_event_loop()
+    def _initialize_api_client(self):
+        """根据配置初始化API客户端"""
+        api_key = config.api.get_api_key()
+        base_url = config.api.get_base_url()
+
+        if not api_key or "placeholder" in api_key or "your-gemini-api-key-here" in api_key:
+            logger.warning(f"未配置 {self.provider} 的API密钥，API功能可能受限。")
+            self.api_client = None
+            return
+
+        logger.info(f"正在初始化API客户端，提供商: {self.provider}")
+
+        if self.provider == "gemini":
+            try:
+                proxy_url = os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
+                if proxy_url:
+                    genai.configure(api_key=api_key, transport='rest', client_options={"api_endpoint": "generativelanguage.googleapis.com", "proxy": proxy_url})
+                    logger.info(f"Google Gemini 使用代理: {proxy_url}")
+                else:
+                    genai.configure(api_key=api_key)
+                
+                self.api_client = genai.GenerativeModel(config.api.model)
+                logger.info(f"Google Gemini 模型初始化成功: {config.api.model}")
+            except Exception as e:
+                logger.error(f"Google Gemini 模型初始化失败: {e}", exc_info=True)
+                self.api_client = None
+        else: # openai, deepseek等兼容OpenAI API的提供商
+            if not base_url:
+                logger.error(f"{self.provider} 的 base_url 未配置。")
+                self.api_client = None
+                return
+            try:
+                self.api_client = AsyncOpenAI(
+                    api_key=api_key, 
+                    base_url=base_url.rstrip('/') + '/'
+                )
+                logger.info(f"{self.provider} 客户端初始化成功，模型: {config.api.model}")
+            except Exception as e:
+                logger.error(f"{self.provider} 客户端初始化失败: {e}", exc_info=True)
+                self.api_client = None
+
 
     def _init_mcp_services(self):
         """初始化MCP服务系统（只在首次初始化时输出日志，后续静默）"""
@@ -263,24 +288,44 @@ class NagaConversation: # 对话主类
 
     async def _call_llm(self, messages: List[Dict]) -> Dict:
         """调用LLM API"""
+        if not self.api_client:
+            return {'content': 'API客户端未初始化，请检查API密钥和配置。', 'status': 'error'}
+
         try:
-            resp = await self.async_client.chat.completions.create(
-                model=config.api.model, 
-                messages=messages, 
-                temperature=config.api.temperature, 
-                max_tokens=config.api.max_tokens, 
-                stream=False  # 工具调用循环中不使用流式
-            )
-            return {
-                'content': resp.choices[0].message.content,
-                'status': 'success'
-            }
-        except RuntimeError as e:
-            if "handler is closed" in str(e):
-                logger.debug(f"忽略连接关闭异常: {e}")
-                # 重新创建客户端并重试
-                self.async_client = AsyncOpenAI(api_key=config.api.api_key, base_url=config.api.base_url.rstrip('/') + '/')
-                resp = await self.async_client.chat.completions.create(
+            if self.provider == "gemini":
+                # 将消息转换为Gemini格式
+                # Gemini没有严格的system role，我们将system prompt合并到第一个user message中
+                system_prompt = next((m['content'] for m in messages if m['role'] == 'system'), "")
+                
+                gemini_messages = []
+                is_first_user_message = True
+                for m in messages:
+                    if m['role'] == 'user':
+                        if is_first_user_message and system_prompt:
+                            gemini_messages.append({'role': 'user', 'parts': [system_prompt + "\n\n" + m['content']]})
+                            is_first_user_message = False
+                        else:
+                            gemini_messages.append({'role': 'user', 'parts': [m['content']]})
+                    elif m['role'] == 'assistant':
+                        # Gemini API 需要交替的用户和模型角色
+                        if gemini_messages and gemini_messages[-1]['role'] == 'model':
+                            # 如果上一条也是model，则合并内容
+                             gemini_messages[-1]['parts'][0] += "\n" + m['content']
+                        else:
+                            gemini_messages.append({'role': 'model', 'parts': [m['content']]})
+
+                # 确保第一条消息是 user
+                if not gemini_messages or gemini_messages[0]['role'] != 'user':
+                     gemini_messages.insert(0, {'role': 'user', 'parts': [system_prompt or "你好"]})
+
+
+                resp = await self.api_client.generate_content_async(gemini_messages)
+                return {
+                    'content': resp.text,
+                    'status': 'success'
+                }
+            else: # DeepSeek, OpenAI
+                resp = await self.api_client.chat.completions.create(
                     model=config.api.model, 
                     messages=messages, 
                     temperature=config.api.temperature, 
@@ -291,12 +336,15 @@ class NagaConversation: # 对话主类
                     'content': resp.choices[0].message.content,
                     'status': 'success'
                 }
-            else:
-                raise
         except Exception as e:
-            logger.error(f"LLM API调用失败: {e}")
+            logger.error(f"{self.provider} API调用失败: {e}", exc_info=True)
+            # 检查是否是认证失败
+            if "API key" in str(e) or "authentication" in str(e).lower():
+                 error_message = f"API认证失败，请检查你的 {self.provider} API密钥是否正确。"
+            else:
+                error_message = f"API调用失败: {str(e)}"
             return {
-                'content': f"API调用失败: {str(e)}",
+                'content': error_message,
                 'status': 'error'
             }
 
@@ -431,6 +479,10 @@ class NagaConversation: # 对话主类
 
     async def process(self, u, is_voice_input=False):  # 添加is_voice_input参数
         try:
+            # 始终在处理开始时初始化/重新初始化API客户端
+            # 这可以确保客户端使用当前工作线程的事件循环
+            self._initialize_api_client()
+
             # 开发者模式优先判断
             if u.strip().lower() == "#devmode":
                 self.dev_mode = not self.dev_mode  # 切换模式

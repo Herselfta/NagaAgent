@@ -15,11 +15,11 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcpserver.mcp_registry import MCP_REGISTRY # MCP服务注册表
 
-from config import DEBUG, LOG_LEVEL
+from config import config
 
 # 配置日志
 logging.basicConfig(
-    level=logging.DEBUG if DEBUG else getattr(logging, LOG_LEVEL),
+    level=logging.DEBUG if config.system.debug else getattr(logging, config.system.log_level),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("MCPManager")

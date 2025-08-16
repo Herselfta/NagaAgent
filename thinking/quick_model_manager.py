@@ -10,6 +10,7 @@ import time
 import re
 from typing import Dict, Any, Optional, Union, List
 from openai import AsyncOpenAI
+import google.generativeai as genai
 from config import (
     QUICK_MODEL_CONFIG, 
     OUTPUT_FILTER_CONFIG,
@@ -24,7 +25,8 @@ from config import (
     NEXT_QUESTION_SYSTEM_PROMPT,
     API_KEY, 
     BASE_URL, 
-    MODEL
+    MODEL,
+    GEMINI_API_KEY
 )
 
 logger = logging.getLogger("QuickModelManager")
@@ -55,6 +57,18 @@ class QuickModelManager:
             except Exception as e:
                 logger.warning(f"快速模型初始化失败: {e}")
                 self.enabled = False
+
+        # 初始化 Gemini 客户端
+        self.gemini_client = None
+        self.gemini_enabled = False
+        if GEMINI_API_KEY:
+            try:
+                genai.configure(api_key=GEMINI_API_KEY)
+                self.gemini_client = genai.GenerativeModel('gemini-1.5-flash')
+                self.gemini_enabled = True
+                logger.info("Google Gemini 模型初始化成功: gemini-1.5-flash")
+            except Exception as e:
+                logger.warning(f"Google Gemini 模型初始化失败: {e}")
         
         # 备用大模型客户端
         self.fallback_client = AsyncOpenAI(
@@ -192,7 +206,37 @@ class QuickModelManager:
                         "decision_type": decision_type
                     }
             except Exception as e:
-                logger.warning(f"快速决策失败，降级到大模型: {e}")
+                logger.warning(f"快速决策失败，尝试使用 Gemini: {e}")
+                self.stats["quick_model_failures"] += 1
+
+        # 尝试使用 Gemini 模型
+        if self.gemini_enabled and self.gemini_client:
+            try:
+                result = await self._call_gemini_model(
+                    decision_prompt,
+                    system_prompt
+                )
+
+                if result:
+                    # 过滤输出内容
+                    filtered_result = self._filter_output(result)
+                    # 验证输出格式
+                    validated_result = self._validate_decision_output(filtered_result, decision_type)
+
+                    self.stats["quick_model_calls"] += 1
+                    self.stats["quick_model_successes"] += 1
+                    self.stats["total_time_saved"] += (time.time() - start_time)
+
+                    return {
+                        "decision": validated_result,
+                        "raw_output": result,
+                        "filtered_output": filtered_result,
+                        "model_used": "gemini",
+                        "response_time": time.time() - start_time,
+                        "decision_type": decision_type
+                    }
+            except Exception as e:
+                logger.warning(f"Gemini 决策失败，降级到大模型: {e}")
                 self.stats["quick_model_failures"] += 1
         
         # 降级到大模型
@@ -279,6 +323,41 @@ class QuickModelManager:
                 logger.warning(f"快速格式化失败，降级到大模型: {e}")
                 self.stats["quick_model_failures"] += 1
         
+        # 尝试使用 Gemini 模型
+        if self.gemini_enabled and self.gemini_client:
+            try:
+                result = await self._call_gemini_model(
+                    format_prompt,
+                    JSON_FORMAT_SYSTEM_PROMPT
+                )
+
+                if result:
+                    # 过滤输出内容
+                    filtered_result = self._filter_output(result)
+
+                    # 验证JSON格式
+                    try:
+                        parsed_json = json.loads(filtered_result)
+                        self.stats["quick_model_calls"] += 1
+                        self.stats["quick_model_successes"] += 1
+                        self.stats["total_time_saved"] += (time.time() - start_time)
+
+                        return {
+                            "json_result": parsed_json,
+                            "raw_output": result,
+                            "filtered_output": filtered_result,
+                            "model_used": "gemini",
+                            "response_time": time.time() - start_time,
+                            "format_type": format_type,
+                            "valid_json": True
+                        }
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Gemini 模型JSON格式无效，降级到大模型: {e}")
+                        self.stats["quick_model_failures"] += 1
+            except Exception as e:
+                logger.warning(f"Gemini 格式化失败，降级到大模型: {e}")
+                self.stats["quick_model_failures"] += 1
+
         # 降级到大模型
         try:
             result = await self._call_fallback_model(
@@ -485,6 +564,16 @@ class QuickModelManager:
             logger.warning(f"快速模型调用失败: {e}")
             return None
     
+    async def _call_gemini_model(self, prompt: str, system_prompt: str) -> Optional[str]:
+        """调用Google Gemini模型"""
+        try:
+            full_prompt = f"{system_prompt}\n\n{prompt}"
+            response = await self.gemini_client.generate_content_async(full_prompt)
+            return response.text
+        except Exception as e:
+            logger.warning(f"Gemini 模型调用失败: {e}")
+            return None
+
     async def _call_fallback_model(self, prompt: str, system_prompt: str) -> str:
         """调用备用大模型"""
         try:
@@ -931,4 +1020,4 @@ class QuickModelManager:
         
         logger.info(f"  - 最终结果数: {len(filtered_results)}个")
         
-        return filtered_results 
+        return filtered_results

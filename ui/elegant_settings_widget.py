@@ -334,21 +334,53 @@ class ElegantSettingsWidget(QWidget):
         
     def create_api_group(self, parent_layout):
         group = SettingGroup("API 配置")
-        # API Key
-        if hasattr(config.api, "api_key"):
-            api_key_input = QLineEdit()
-            api_key_input.setText(config.api.api_key)
-            api_key_input.setStyleSheet(self.get_input_style() + "color: #fff;")
-            api_key_card = SettingCard("API Key", "用于连接API的密钥", api_key_input, "api.api_key")
-            api_key_card.value_changed.connect(self.on_setting_changed)
-            group.add_card(api_key_card)
-            self.api_key_input = api_key_input
+        # API Provider
+        if hasattr(config.api, "provider"):
+            provider_combo = QComboBox()
+            provider_combo.addItems(["deepseek", "openai", "gemini"])
+            provider_combo.setCurrentText(config.api.provider)
+            provider_combo.setStyleSheet(self.get_combo_style() + "color: #fff;")
+            provider_card = SettingCard("API提供商", "选择API服务提供商", provider_combo, "api.provider")
+            provider_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(provider_card)
+            self.provider_combo = provider_combo
+
+        # DeepSeek API Key
+        if hasattr(config.api, "deepseek_api_key"):
+            deepseek_api_key_input = QLineEdit()
+            deepseek_api_key_input.setText(config.api.deepseek_api_key)
+            deepseek_api_key_input.setStyleSheet(self.get_input_style() + "color: #fff;")
+            deepseek_api_key_card = SettingCard("DeepSeek API Key", "DeepSeek的API密钥", deepseek_api_key_input, "api.deepseek_api_key")
+            deepseek_api_key_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(deepseek_api_key_card)
+            self.deepseek_api_key_input = deepseek_api_key_input
+
+        # OpenAI API Key
+        if hasattr(config.api, "openai_api_key"):
+            openai_api_key_input = QLineEdit()
+            openai_api_key_input.setText(config.api.openai_api_key)
+            openai_api_key_input.setStyleSheet(self.get_input_style() + "color: #fff;")
+            openai_api_key_card = SettingCard("OpenAI API Key", "OpenAI的API密钥", openai_api_key_input, "api.openai_api_key")
+            openai_api_key_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(openai_api_key_card)
+            self.openai_api_key_input = openai_api_key_input
+
+        # Gemini API Key
+        if hasattr(config.api, "gemini_api_key"):
+            gemini_api_key_input = QLineEdit()
+            gemini_api_key_input.setText(config.api.gemini_api_key)
+            gemini_api_key_input.setStyleSheet(self.get_input_style() + "color: #fff;")
+            gemini_api_key_card = SettingCard("Gemini API Key", "Gemini的API密钥", gemini_api_key_input, "api.gemini_api_key")
+            gemini_api_key_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(gemini_api_key_card)
+            self.gemini_api_key_input = gemini_api_key_input
+        
         # Base URL
-        if hasattr(config.api, "base_url"):
+        if hasattr(config.api, "deepseek_base_url"):
             base_url_input = QLineEdit()
-            base_url_input.setText(config.api.base_url)
+            base_url_input.setText(config.api.deepseek_base_url)
             base_url_input.setStyleSheet(self.get_input_style() + "color: #fff;")
-            base_url_card = SettingCard("API Base URL", "API基础URL", base_url_input, "api.base_url")
+            base_url_card = SettingCard("API Base URL", "API基础URL (主要用于DeepSeek)", base_url_input, "api.deepseek_base_url")
             base_url_card.value_changed.connect(self.on_setting_changed)
             group.add_card(base_url_card)
             self.base_url_input = base_url_input
@@ -839,8 +871,11 @@ class ElegantSettingsWidget(QWidget):
         """加载当前设置"""
         try:
             # API设置
-            self.api_key_input.setText(config.api.api_key if config.api.api_key != "sk-placeholder-key-not-set" else "")
-            self.base_url_input.setText(config.api.base_url)
+            self.provider_combo.setCurrentText(config.api.provider)
+            self.deepseek_api_key_input.setText(config.api.deepseek_api_key if config.api.deepseek_api_key != "sk-placeholder-key-not-set" else "")
+            self.openai_api_key_input.setText(config.api.openai_api_key if config.api.openai_api_key != "sk-placeholder-key-not-set" else "")
+            self.gemini_api_key_input.setText(config.api.gemini_api_key if config.api.gemini_api_key != "sk-placeholder-key-not-set" else "")
+            self.base_url_input.setText(config.api.deepseek_base_url)
             
             index = self.model_combo.findText(config.api.model)
             if index >= 0:

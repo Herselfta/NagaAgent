@@ -1,5 +1,5 @@
 from agents import Agent
-from config import *  # 统一变量管理 #
+from config import config  # 统一变量管理 #
 import asyncio
 import json
 import ctypes
@@ -77,7 +77,7 @@ class SystemControlAgent(Agent):
             name=self.name,
             instructions=self.instructions,
             tools=[],
-            model=MODEL_NAME
+            model=config.api.model
         )
         # 初始化Windows API
         self._init_windows_api()

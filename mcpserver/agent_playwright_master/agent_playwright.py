@@ -6,7 +6,7 @@ import os
 import platform
 from playwright.async_api import async_playwright
 from agents import Agent
-from config import PLAYWRIGHT_HEADLESS, EDGE_LNK_PATH, EDGE_COMMON_PATHS
+from config import config
 
 print = lambda *a, **k: sys.stderr.write('[print] ' + (' '.join(map(str, a))) + '\n')
 
@@ -47,7 +47,7 @@ class SimpleBrowserTool:
                 # 尝试使用Edge通道启动
                 try:
                     self._browser = await self._playwright.chromium.launch(
-                        headless=PLAYWRIGHT_HEADLESS,
+                        headless=config.playwright.headless,
                         channel="msedge"
                     )
                     print("✅ 使用Edge通道启动浏览器成功")
@@ -57,7 +57,7 @@ class SimpleBrowserTool:
                     edge_path = self._get_edge_path()
                     if edge_path:
                         self._browser = await self._playwright.chromium.launch(
-                            headless=PLAYWRIGHT_HEADLESS,
+                            headless=config.playwright.headless,
                             executable_path=edge_path
                         )
                         print(f"✅ 使用路径启动浏览器成功: {edge_path}")
@@ -104,14 +104,14 @@ class SimpleBrowserTool:
             return None
             
         # 1. 尝试解析.lnk文件
-        if os.path.exists(EDGE_LNK_PATH):
+        if os.path.exists(config.playwright.edge_lnk_path):
             try:
                 import pythoncom
                 from win32com.shell import shell
                 shortcut = pythoncom.CoCreateInstance(
                     shell.CLSID_ShellLink, None, pythoncom.CLSCTX_INPROC_SERVER, shell.IID_IShellLink
                 )
-                shortcut.QueryInterface(shell.IID_IPersistFile).Load(EDGE_LNK_PATH)
+                shortcut.QueryInterface(shell.IID_IPersistFile).Load(config.playwright.edge_lnk_path)
                 exe = shortcut.GetPath(shell.SLGP_UNCPRIORITY)[0]
                 if exe and os.path.exists(exe):
                     return exe
@@ -121,7 +121,7 @@ class SimpleBrowserTool:
                 print(f"解析.lnk文件失败: {e}")
         
         # 2. 尝试常见路径
-        for path in EDGE_COMMON_PATHS:
+        for path in config.playwright.edge_common_paths:
             if os.path.exists(path):
                 return path
                 

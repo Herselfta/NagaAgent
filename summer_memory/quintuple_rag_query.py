@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from config import config
-API_URL = f"{config.api.base_url.rstrip('/')}/chat/completions"
+API_URL = f"{config.api.deepseek_base_url.rstrip('/')}/chat/completions"
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
