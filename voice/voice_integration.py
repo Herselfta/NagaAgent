@@ -14,7 +14,7 @@ import time
 import hashlib
 import re
 import io
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 import aiohttp
 import sys
 from pathlib import Path
@@ -52,6 +52,7 @@ class VoiceIntegration:
         self.playing_lock = threading.Lock()
         self.playing_texts = set()  # 防止重复播放
         self.audio_files_in_use = set()  # 正在使用的音频文件
+        self.audio_files_in_queue = set()  # 在播放队列中等待的音频文件
         
         # 播放状态控制
         self.is_playing = False
@@ -145,8 +146,10 @@ class VoiceIntegration:
             # 生成音频文件
             audio_file_path = self._generate_audio_file_sync(text)
             if audio_file_path:
-                # 加入播放队列
-                self.audio_queue.put(audio_file_path)
+                # 加入播放队列并标记为队列中
+                with self.playing_lock:
+                    self.audio_queue.put(audio_file_path)
+                    self.audio_files_in_queue.add(audio_file_path)
                 logger.info(f"音频文件已加入播放队列: {text[:50]}... -> {audio_file_path}")
             else:
                 logger.warning(f"音频文件生成失败: {text[:50]}...")
@@ -242,12 +245,13 @@ class VoiceIntegration:
         """音频播放工作线程"""
         logger.info("音频播放工作线程启动")
         
-        # 在工作线程中重新初始化pygame
+        # 在工作线程中检查pygame是否已初始化
         try:
             import pygame
-            pygame.init()
-            pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
-            logger.info("音频播放工作线程中pygame初始化成功")
+            if not pygame.mixer.get_init():
+                pygame.init()
+                pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=512)
+                logger.info("音频播放工作线程中pygame初始化成功")
         except Exception as e:
             logger.error(f"音频播放工作线程中pygame初始化失败: {e}")
             return
@@ -256,13 +260,16 @@ class VoiceIntegration:
             while True:
                 try:
                     # 从队列获取音频文件路径
-                    audio_file_path = self.audio_queue.get(timeout=1)  # 1秒超时
+                    audio_file_path = self.audio_queue.get(timeout=10)  # 10秒超时，避免频繁中断
                     
                     if audio_file_path and os.path.exists(audio_file_path):
                         logger.info(f"开始播放音频文件: {audio_file_path}")
                         self._play_audio_file_sync(audio_file_path)
                     else:
                         logger.warning(f"音频文件不存在或为空: {audio_file_path}")
+                        # 从队列集合中移除不存在的文件
+                        with self.playing_lock:
+                            self.audio_files_in_queue.discard(audio_file_path)
                         
                 except Empty:
                     # 队列为空，继续等待
@@ -289,27 +296,51 @@ class VoiceIntegration:
             # 检查文件是否存在
             if not os.path.exists(file_path):
                 logger.error(f"音频文件不存在: {file_path}")
+                # 从队列集合中移除不存在的文件
+                with self.playing_lock:
+                    self.audio_files_in_queue.discard(file_path)
                 return
             
             # 检查文件大小
             file_size = os.path.getsize(file_path)
             logger.info(f"音频文件大小: {file_size} 字节")
             
+            # 标记文件正在使用
+            with self.playing_lock:
+                self.audio_files_in_use.add(file_path)
+                self.audio_files_in_queue.discard(file_path)  # 从队列中移除，开始播放
+            
+            # 停止当前正在播放的音频
+            if pygame.mixer.music.get_busy():
+                pygame.mixer.music.stop()
+                time.sleep(0.1)  # 给一点时间让音频停止
+            
             # 加载并播放音频文件
             pygame.mixer.music.load(file_path)
             pygame.mixer.music.play()
             
             # 等待播放完成
+            start_time = time.time()
             while pygame.mixer.music.get_busy():
                 time.sleep(0.1)
+                # 防止无限等待，设置最长播放时间（5分钟）
+                if time.time() - start_time > 300:
+                    logger.warning(f"音频播放超时，强制停止: {file_path}")
+                    pygame.mixer.music.stop()
+                    break
             
             logger.info(f"音频播放完成: {file_path}")
             
             # 播放完成后从使用列表中移除
-            self.audio_files_in_use.discard(file_path)
+            with self.playing_lock:
+                self.audio_files_in_use.discard(file_path)
             
         except Exception as e:
             logger.error(f"播放音频文件失败: {e}")
+            # 发生错误时也要清理状态
+            with self.playing_lock:
+                self.audio_files_in_use.discard(file_path)
+                self.audio_files_in_queue.discard(file_path)
 
     def _audio_cleanup_worker(self):
         """音频文件清理工作线程"""
@@ -317,30 +348,57 @@ class VoiceIntegration:
         
         while True:
             try:
-                time.sleep(30)  # 每30秒清理一次
+                time.sleep(60)  # 改为每60秒清理一次，减少清理频率
                 
                 # 获取所有音频文件
                 audio_files = list(self.audio_temp_dir.glob("*.wav"))  # 只清理wav文件
                 
-                # 清理不在使用中的文件
+                # 清理既不在使用中也不在队列中的文件
                 files_to_clean = []
-                for file_path in audio_files:
-                    if str(file_path) not in self.audio_files_in_use:
-                        files_to_clean.append(file_path)
+                files_to_keep = []
+                
+                with self.playing_lock:
+                    for file_path in audio_files:
+                        file_path_str = str(file_path)
+                        if file_path_str not in self.audio_files_in_use and file_path_str not in self.audio_files_in_queue:
+                            files_to_clean.append(file_path)
+                        else:
+                            files_to_keep.append(file_path)
                 
                 if files_to_clean:
-                    logger.info(f"开始清理 {len(files_to_clean)} 个音频文件")
+                    logger.info(f"开始清理 {len(files_to_clean)} 个音频文件，保留 {len(files_to_keep)} 个文件")
                     for file_path in files_to_clean:
                         try:
-                            file_path.unlink()
+                            # 再次检查文件状态，防止竞态条件
+                            with self.playing_lock:
+                                file_path_str = str(file_path)
+                                if file_path_str not in self.audio_files_in_use and file_path_str not in self.audio_files_in_queue:
+                                    file_path.unlink()
+                                    logger.debug(f"已删除音频文件: {file_path}")
+                                else:
+                                    logger.debug(f"跳过正在使用的音频文件: {file_path}")
                         except Exception as e:
                             logger.warning(f"删除音频文件失败: {file_path} - {e}")
                     
                     logger.info(f"音频文件清理完成，共清理 {len(files_to_clean)} 个文件")
+                else:
+                    logger.debug(f"本次清理检查完成，无需要清理的文件")
                     
             except Exception as e:
                 logger.error(f"音频文件清理异常: {e}")
                 time.sleep(5)
+
+    def get_debug_info(self) -> Dict[str, Any]:
+        """获取调试信息"""
+        with self.playing_lock:
+            return {
+                "audio_files_in_use": len(self.audio_files_in_use),
+                "audio_files_in_queue": len(self.audio_files_in_queue),
+                "queue_size": self.audio_queue.qsize(),
+                "playing_texts": len(self.playing_texts),
+                "is_playing": self.is_playing,
+                "temp_files": len(list(self.audio_temp_dir.glob(f"*.{config.tts.default_format}")))
+            }
 
 def get_voice_integration() -> VoiceIntegration:
     """获取语音集成实例"""
