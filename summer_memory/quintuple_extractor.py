@@ -90,6 +90,8 @@ async def extract_quintuples_async(text):
             except Exception as e:
                 logging.warning(f"Quintuple Extractor: Google Gemini model initialization failed: {e}", exc_info=True)
 
+    timeout = getattr(config.grag, "extraction_timeout", 30)
+
     # 优先尝试使用Gemini
     if gemini_client:
         try:
@@ -124,7 +126,10 @@ async def extract_quintuples_async(text):
 
 除了JSON对象，不要输出任何其他内容。
 """
-            response = await gemini_client.generate_content_async(prompt)
+            response = await asyncio.wait_for(
+                gemini_client.generate_content_async(prompt),
+                timeout=timeout
+            )
             
             json_text = response.text.strip()
             # 增加对```json ... ```包裹格式的兼容
@@ -177,22 +182,25 @@ async def _extract_quintuples_async_structured(text, async_client):
 
     # 重试机制配置
     max_retries = 3
+    timeout = getattr(config.grag, "extraction_timeout", 30)
 
     for attempt in range(max_retries + 1):
         logger.info(f"尝试使用结构化输出提取五元组 (第{attempt + 1}次)")
 
         try:
             # 尝试使用结构化输出
-            completion = await async_client.beta.chat.completions.parse(
-                model=config.api.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"请从以下文本中提取五元组：\n\n{text}"}
-                ],
-                response_format=QuintupleResponse,
-                max_tokens=config.api.max_tokens,
-                temperature=0.3,
-                timeout=600 + (attempt * 20)
+            completion = await asyncio.wait_for(
+                async_client.beta.chat.completions.parse(
+                    model=config.api.model,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": f"请从以下文本中提取五元组：\n\n{text}"}
+                    ],
+                    response_format=QuintupleResponse,
+                    max_tokens=config.api.max_tokens,
+                    temperature=0.3,
+                ),
+                timeout=timeout + (attempt * 5) # 每次重试增加超时
             )
 
             # 解析结果
@@ -237,15 +245,18 @@ async def _extract_quintuples_async_fallback(text, async_client):
 """
 
     max_retries = 2
+    timeout = getattr(config.grag, "extraction_timeout", 30)
 
     for attempt in range(max_retries + 1):
         try:
-            response = await async_client.chat.completions.create(
-                model=config.api.model,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=config.api.max_tokens,
-                temperature=0.3,
-                timeout=600 + (attempt * 20)
+            response = await asyncio.wait_for(
+                async_client.chat.completions.create(
+                    model=config.api.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=config.api.max_tokens,
+                    temperature=0.3,
+                ),
+                timeout=timeout + (attempt * 5) # 每次重试增加超时
             )
             
             content = response.choices[0].message.content.strip()
@@ -298,6 +309,7 @@ def _extract_quintuples_structured(text):
 
     # 重试机制配置
     max_retries = 3
+    timeout = getattr(config.grag, "extraction_timeout", 30)
 
     for attempt in range(max_retries + 1):
         logger.info(f"尝试使用结构化输出提取五元组 (第{attempt + 1}次)")
@@ -313,7 +325,7 @@ def _extract_quintuples_structured(text):
                 response_format=QuintupleResponse,
                 max_tokens=config.api.max_tokens,
                 temperature=0.3,
-                timeout=600 + (attempt * 20)
+                timeout=timeout + (attempt * 5) # 每次重试增加超时
             )
 
             # 解析结果
@@ -358,6 +370,7 @@ def _extract_quintuples_fallback(text):
 """
 
     max_retries = 2
+    timeout = getattr(config.grag, "extraction_timeout", 30)
 
     for attempt in range(max_retries + 1):
         try:
@@ -366,7 +379,7 @@ def _extract_quintuples_fallback(text):
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=config.api.max_tokens,
                 temperature=0.5,
-                timeout=600 + (attempt * 20)
+                timeout=timeout + (attempt * 5) # 每次重试增加超时
             )
 
             content = response.choices[0].message.content.strip()
@@ -389,6 +402,6 @@ def _extract_quintuples_fallback(text):
         except Exception as e:
             logger.error(f"传统方法提取失败: {str(e)}")
             if attempt < max_retries:
-                time.sleep(1)
+                time.sleep(1 + attempt)
 
     return []

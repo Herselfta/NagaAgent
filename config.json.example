@@ -56,18 +56,31 @@
 
   // 语音合成(TTS)配置
   "tts": {
-    "api_key": "your_tts_api_key_here",  // TTS API密钥
-    "port": 5050,                        // TTS服务端口
-    "default_voice": "en-US-AvaNeural",  // 默认语音
-    "default_format": "mp3",             // 默认音频格式
-    "default_speed": 1.0,                // 默认语速
-    "default_language": "en-US",         // 默认语言
-    "remove_filter": false,              // 是否移除过滤器
-    "expand_api": true,                  // 是否扩展API
-    "require_api_key": true              // 是否需要API密钥
+    "TTS_CHOICE": "GPT-SoVITS",            // 选择 TTS 系统: GPT-SoVITS, AZURE, DISABLE
+    "GPT-SoVITS": {
+        "is_enabled": true,                 // 是否启用 GPT-SoVITS
+        "gpt_sovits_api_url": "http://127.0.0.1:9880/tts",  // GPT-SoVITS API URL
+        "ref_audio_path": "path/to/your/reference.mp3",      // 主参考音频路径
+        "prompt_text": "参考音频的提示文本",                   // 参考音频的提示文本
+        "text_lang": "zh",                                   // 合成文本语言
+        "prompt_lang": "zh",                                 // 提示文本语言
+        "top_k": 5,                                         // top_k 参数
+        "top_p": 1.0,                                       // top_p 参数
+        "temperature": 1.0,                                 // 温度参数
+        "text_split_method": "cut1",                        // 文本分割方法
+        "batch_size": 10,                                   // 批处理大小
+        "speed_factor": 1.0,                                // 语速因子
+        "aux_ref_audio_paths": [                            // 辅助参考音频路径列表
+            "path/to/your/aux_reference1.mp3",
+            "path/to/your/aux_reference2.mp3"
+        ]
+    },
+    "api_key": "your_api_key_here",          // API密钥（如果需要）
+    "port": 9880,                            // TTS服务端口
+    "default_voice": "zh-CN-XiaoxiaoNeural", // 默认语音（仅用于其他TTS系统）
+    "default_format": "wav",                  // 默认音频格式
+    "default_speed": 1.0                      // 默认语速
   },
-
-
 
   // 天气API密钥
   "weather_api_key": "your-weather-api-key",  // 高德地图天气API密钥

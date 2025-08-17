@@ -63,6 +63,44 @@ def init_memory_manager():
 
 memory_manager = init_memory_manager()
 
+# 语音系统导入
+def init_voice_system():
+    """根据配置初始化语音系统"""
+    if not config.system.voice_enabled:
+        return None
+    
+    tts_choice = config.tts.TTS_CHOICE.upper()
+    logger.info(f"正在初始化语音系统，选择: {tts_choice}")
+
+    if tts_choice == "GPT-SOVITS":
+        try:
+            from voice.gpt_sovits_tts import GPTSoVITS_TTS
+            tts_system = GPTSoVITS_TTS()
+            if tts_system.is_enabled:
+                logger.info("[TTS] ✅ GPT-SoVITS TTS 初始化成功")
+                return tts_system
+            else:
+                logger.warning("[TTS] ⚠️ GPT-SoVITS TTS 已配置但未启用 (is_enabled: false)")
+                return None
+        except ImportError:
+            logger.error("无法导入 GPTSoVITS_TTS，请确保 voice/gpt_sovits_tts.py 文件存在。")
+            return None
+        except Exception as e:
+            logger.error(f"GPT-SoVITS TTS 初始化失败: {e}")
+            return None
+    elif tts_choice == "AZURE":
+        # 此处可以添加 Azure TTS 的初始化逻辑
+        logger.warning("Azure TTS 提供商尚未完全实现。")
+        return None
+    elif tts_choice == "DISABLE":
+        logger.info("TTS 已禁用。")
+        return None
+    else:
+        logger.warning(f"未知的 TTS 选择: {tts_choice}")
+        return None
+
+voice_system = init_voice_system()
+
 # 工具函数
 def now():
     """获取当前时间戳"""
@@ -94,15 +132,10 @@ class NagaConversation: # 对话主类
             SystemState._memory_initialized = True
         
         # 初始化语音处理系统
-        self.voice = None
-        if config.system.voice_enabled:
-            try:
-                if not SystemState._voice_enabled_logged:
-                    logger.info("语音功能已启用，由UI层管理")
-                    SystemState._voice_enabled_logged = True
-            except Exception as e:
-                logger.warning(f"语音系统初始化失败: {e}")
-                self.voice = None
+        self.voice = voice_system
+        if self.voice and not SystemState._voice_enabled_logged:
+            logger.info(f"语音功能已启用，使用 {config.tts.TTS_CHOICE} 提供商。")
+            SystemState._voice_enabled_logged = True
         
         # Do not get loop in constructor, it binds to the wrong thread
         # self.loop = asyncio.get_event_loop()
@@ -651,10 +684,13 @@ class NagaConversation: # 对话主类
     #         return False
 
 async def process_user_message(s,msg):
-    if config.system.voice_enabled and not msg: #无文本输入时启动语音识别
-        async for text in s.voice.stt_stream():
-            if text:
-                msg=text
-                break
-        return await s.process(msg, is_voice_input=True)  # 语音输入
+    # 当启用语音系统且无文本输入时，启动语音识别
+    if config.system.voice_enabled and not msg: 
+        # 当s.voice不为None时（即语音系统正常初始化）才进行语音识别
+        if s.voice:
+            async for text in s.voice.stt_stream():
+                if text:
+                    msg=text
+                    break
+            return await s.process(msg, is_voice_input=True)  # 语音输入
     return await s.process(msg, is_voice_input=False)  # 文字输入

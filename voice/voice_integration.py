@@ -33,9 +33,9 @@ class VoiceIntegration:
     """语音集成模块 - 重构版本：真正的异步处理"""
     
     def __init__(self):
-        self.provider = config.tts.provider
-        if self.provider == 'gpt_sovits':
-            self.tts_url = f"http://127.0.0.1:{config.tts.port}/tts"
+        tts_choice = config.tts.TTS_CHOICE
+        if tts_choice == "GPT-SoVITS":
+            self.tts_url = config.tts.get("GPT-SoVITS", {}).get("gpt_sovits_api_url", "http://127.0.0.1:9880/tts")
         else:
             self.tts_url = f"http://127.0.0.1:{config.tts.port}/v1/audio/speech"
         
@@ -159,36 +159,54 @@ class VoiceIntegration:
         try:
             # 生成文件名
             timestamp = int(time.time() * 1000)
-            filename = f"tts_audio_{timestamp}_{hash(text) % 1000}.{config.tts.default_format}"
+            filename = f"tts_audio_{timestamp}_{hash(text) % 1000}.wav"  # 始终使用wav格式
             file_path = self.audio_temp_dir / filename
             
-            headers = {}
-            if config.tts.require_api_key:
-                headers["Authorization"] = f"Bearer {config.tts.api_key}"
+            headers = {
+                "accept": "audio/wav",
+                "Content-Type": "application/json"
+            }
             
-            if self.provider == 'gpt_sovits':
-                sovits_config = config.tts.gpt_sovits
+            tts_choice = config.tts.TTS_CHOICE
+            gpt_sovits_config = config.tts.get("GPT-SoVITS", {})
+            
+            if tts_choice == "GPT-SoVITS":
+                # 先检查是否启用
+                if not gpt_sovits_config.is_enabled:
+                    logger.error("GPT-SoVITS TTS 未启用")
+                    return None
+
                 payload = {
                     "text": text,
-                    "text_lang": sovits_config.text_lang,
-                    "ref_audio_path": sovits_config.ref_audio_path,
-                    "prompt_text": sovits_config.prompt_text,
-                    "prompt_lang": sovits_config.prompt_lang,
-                    "top_k": sovits_config.top_k,
-                    "top_p": sovits_config.top_p,
-                    "temperature": sovits_config.temperature,
-                    "text_split_method": sovits_config.text_split_method,
-                    "batch_size": sovits_config.batch_size,
-                    "speed_factor": config.tts.default_speed,
-                    "media_type": config.tts.default_format,
+                    "text_lang": gpt_sovits_config.text_lang,
+                    "ref_audio_path": gpt_sovits_config.ref_audio_path,
+                    "aux_ref_audio_paths": gpt_sovits_config.aux_ref_audio_paths,
+                    "prompt_text": gpt_sovits_config.prompt_text,
+                    "prompt_lang": gpt_sovits_config.prompt_lang,
+                    "top_k": gpt_sovits_config.top_k,
+                    "top_p": gpt_sovits_config.top_p,
+                    "temperature": gpt_sovits_config.temperature,
+                    "text_split_method": gpt_sovits_config.text_split_method,
+                    "batch_size": gpt_sovits_config.batch_size,
+                    "speed_factor": gpt_sovits_config.speed_factor,
+                    "media_type": "wav",
                     "streaming_mode": True,
+                    # 附加参数
+                    "batch_threshold": 0.75,
+                    "split_bucket": True,
+                    "fragment_interval": 0.3,
+                    "seed": -1,
+                    "parallel_infer": True,
+                    "repetition_penalty": 1.35,
+                    "sample_steps": 32,
+                    "super_sampling": False
                 }
             else:
                 payload = {
                     "input": text,
-                    "voice": config.tts.default_voice,
-                    "response_format": config.tts.default_format,
-                    "speed": config.tts.default_speed
+                    "voice": getattr(config.tts, "default_voice", "zh-CN-XiaoxiaoNeural"),
+                    "response_format": "wav",
+                    "speed": getattr(config.tts, "default_speed", 1.0)
                 }
             
             # 使用requests进行同步调用
@@ -197,7 +215,7 @@ class VoiceIntegration:
                 self.tts_url,
                 json=payload,
                 headers=headers,
-                timeout=30
+                timeout=60  # 增加超时时间到60秒
             )
             
             if response.status_code == 200:
@@ -302,7 +320,7 @@ class VoiceIntegration:
                 time.sleep(30)  # 每30秒清理一次
                 
                 # 获取所有音频文件
-                audio_files = list(self.audio_temp_dir.glob(f"*.{config.tts.default_format}"))
+                audio_files = list(self.audio_temp_dir.glob("*.wav"))  # 只清理wav文件
                 
                 # 清理不在使用中的文件
                 files_to_clean = []

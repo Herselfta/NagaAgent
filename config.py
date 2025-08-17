@@ -244,49 +244,63 @@ class BrowserConfig(BaseModel):
         return None
 
 
-class GPTSovitsConfig(BaseModel):
-    """GPT-SoVITS专属配置"""
-    ref_audio_path: str = Field(
-        default="E:/GPT-SoVITS-v4-20250422-nvidia50/参考音频/AAA大黑塔/中/艾丝妲是个优秀的管理者，换个本事差的人，十个空间站都不够天才们糟蹋。.mp3",
-        description="主要参考音频路径"
-    )
-    prompt_text: str = Field(
-        default="艾丝妲是个优秀的管理者，换个本事差的人，十个空间站都不够天才们糟蹋。",
-        description="参考音频的提示文本"
-    )
-    prompt_lang: str = Field(default="zh", description="提示文本语言")
-    text_lang: str = Field(default="zh", description="合成文本语言")
-    text_split_method: str = Field(default="cut1", description="文本切分方法")
-    batch_size: int = Field(default=10, description="批处理大小")
-    temperature: float = Field(default=1.0, description="温度")
-    top_p: float = Field(default=1.0, description="Top P")
-    top_k: int = Field(default=5, description="Top K")
-
-
 class TTSConfig(BaseModel):
     """TTS服务配置"""
-    api_key: str = Field(default="your_api_key_here", description="TTS服务API密钥")
-    port: int = Field(default=9880, ge=1, le=65535, description="TTS服务端口")
-    default_voice: str = Field(default="zh-CN-XiaoxiaoNeural", description="默认语音（在gpt_sovits模式下无效）")
-    default_format: str = Field(default="wav", description="默认音频格式（gpt_sovits推荐wav）")
-    default_speed: float = Field(default=1.0, ge=0.1, le=3.0, description="默认语速")
-    default_language: str = Field(default="zh-CN", description="默认语言")
-    remove_filter: bool = Field(default=False, description="是否移除过滤")
-    expand_api: bool = Field(default=True, description="是否扩展API")
-    require_api_key: bool = Field(default=False, description="是否需要API密钥")
-    
-    # 服务提供商切换
-    provider: str = Field(default="gpt_sovits", description="TTS提供商(edgetts/gpt_sovits)")
+    TTS_CHOICE: str = Field(default="DISABLE", description="选择使用的TTS服务: GPT-SOVITS, AZURE, DISABLE")
     
     # gpt-sovits专属配置
-    gpt_sovits: Optional[GPTSovitsConfig] = Field(default_factory=GPTSovitsConfig, description="GPT-SoVITS专属配置")
+    GPT_SoVITS: Optional["GPTSovitsConfig"] = Field(default_factory=lambda: GPTSovitsConfig(), description="GPT-SoVITS专属配置")
 
-    # EdgeTTS/Minimax 旧有配置
+    # EdgeTTS/Minimax/Azure等其他TTS服务的通用配置
+    api_key: Optional[str] = Field(default="your_api_key_here", description="TTS服务API密钥")
+    port: Optional[int] = Field(default=9880, ge=1, le=65535, description="TTS服务端口")
+    default_voice: Optional[str] = Field(default="zh-CN-XiaoxiaoNeural", description="默认语音")
+    default_format: Optional[str] = Field(default="wav", description="默认音频格式")
+    default_speed: Optional[float] = Field(default=1.0, ge=0.1, le=3.0, description="默认语速")
+    default_language: Optional[str] = Field(default="zh-CN", description="默认语言")
+    
+    # 兼容旧版或特定服务的字段
+    remove_filter: Optional[bool] = Field(default=False, description="是否移除过滤")
+    expand_api: Optional[bool] = Field(default=True, description="是否扩展API")
+    require_api_key: Optional[bool] = Field(default=False, description="是否需要API密钥")
     group_id: Optional[str] = Field(default="your_minimax_group_id_here", description="Minimax的group_id")
     tts_model: Optional[str] = Field(default="speech-02-hd", description="TTS模型名称")
     emotion: Optional[str] = Field(default="neutral", description="情感参数")
     minimax_emotion: Optional[str] = Field(default="neutral", description="Minimax情感参数")
-    keep_audio_files: bool = Field(default=False, description="是否保留音频文件用于调试")
+    keep_audio_files: Optional[bool] = Field(default=False, description="是否保留音频文件用于调试")
+
+    # Pydantic的额外配置，允许未在模型中定义的字段
+    model_config = {
+        "extra": "allow"
+    }
+
+class GPTSovitsConfig(BaseModel):
+    """GPT-SoVITS专属配置"""
+    is_enabled: bool = Field(default=False, description="是否启用GPT-SoVITS")
+    gpt_sovits_api_url: str = Field(default="http://127.0.0.1:9880/tts", description="GPT-SoVITS API URL")
+    gpt_sovits_refer_wav_path: str = Field(
+        default="E:/GPT-SoVITS-beta0706/GPT-SoVITS-beta0706/output/slicer_opt/vocal_1_1_0.wav",
+        description="参考音频路径"
+    )
+    gpt_sovits_prompt_text: str = Field(
+        default="你说的对，但是",
+        description="参考音频的提示文本"
+    )
+    gpt_sovits_prompt_language: str = Field(default="zh", description="提示文本语言")
+    gpt_sovits_text_language: str = Field(default="zh", description="合成文本语言")
+    aux_ref_audio_paths: List[str] = Field(default_factory=list, description="辅助参考音频路径列表")
+    top_k: int = Field(default=5, description="Top K参数")
+    top_p: float = Field(default=1.0, description="Top P参数")
+    temperature: float = Field(default=1.0, description="温度参数")
+    text_split_method: str = Field(default="cut1", description="文本分割方法")
+    batch_size: int = Field(default=10, description="批处理大小")
+    speed_factor: float = Field(default=1.0, description="语速调节因子")
+
+
+
+class ExtractorConfig(BaseModel):
+    """五元组提取器配置"""
+    timeout: int = Field(default=30, ge=5, le=120, description="提取器超时时间（秒）")
 
 
 class FilterConfig(BaseModel):
@@ -494,6 +508,7 @@ class NagaConfig(BaseModel):
     mcp: MCPConfig = Field(default_factory=MCPConfig)
     browser: BrowserConfig = Field(default_factory=BrowserConfig)
     tts: TTSConfig = Field(default_factory=TTSConfig)
+    extractor: ExtractorConfig = Field(default_factory=ExtractorConfig)
 
     filter: FilterConfig = Field(default_factory=FilterConfig)
     difficulty: DifficultyConfig = Field(default_factory=DifficultyConfig)

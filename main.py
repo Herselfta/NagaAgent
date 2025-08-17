@@ -189,13 +189,20 @@ class ServiceManager:
 
 # 工具函数
 def show_help():
-    print('系统命令: 清屏, 查看索引, 帮助, 退出')
+    print('系统命令: 清屏, 查看索引, 帮助, 退出, tts [文本]')
 
 def show_index():
     print('主题分片索引已集成，无需单独索引查看')
 
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
+
+async def test_tts(text: str):
+    """测试TTS功能"""
+    from voice.handle_text import speak_text
+    print(f"正在测试TTS: '{text}'")
+    await speak_text(text)
+    print("TTS测试完成。")
 
 # 初始化服务管理器
 service_manager = ServiceManager()
@@ -240,18 +247,24 @@ class NagaAgentAdapter:
 
 # 主程序入口
 if __name__ == "__main__":
-    if not asyncio.get_event_loop().is_running():
-        asyncio.set_event_loop(asyncio.new_event_loop())
-    
-    app = QApplication(sys.argv)
-    icon_path = os.path.join(os.path.dirname(__file__), "ui", "window_icon.png")
-    app.setWindowIcon(QIcon(icon_path))
-    
-    # 集成控制台托盘功能
-    console_tray = integrate_console_tray()
-    
-    win = ChatWindow()
-    win.setWindowTitle("NagaAgent")
-    win.show()
-    
-    sys.exit(app.exec_())
+    if len(sys.argv) > 2 and sys.argv[1].lower() == 'tts':
+        # 从命令行运行TTS测试
+        text_to_speak = " ".join(sys.argv[2:])
+        asyncio.run(test_tts(text_to_speak))
+    else:
+        # 启动GUI
+        if not asyncio.get_event_loop().is_running():
+            asyncio.set_event_loop(asyncio.new_event_loop())
+        
+        app = QApplication(sys.argv)
+        icon_path = os.path.join(os.path.dirname(__file__), "ui", "window_icon.png")
+        app.setWindowIcon(QIcon(icon_path))
+        
+        # 集成控制台托盘功能
+        console_tray = integrate_console_tray()
+        
+        win = ChatWindow()
+        win.setWindowTitle("NagaAgent")
+        win.show()
+        
+        sys.exit(app.exec_())

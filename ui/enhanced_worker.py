@@ -27,8 +27,10 @@ class EnhancedWorker(QThread):
         
         # 初始化语音集成模块
         try:
-            from voice.voice_integration import get_voice_integration
+            from voice.handle_text import get_voice_integration
             self.voice_integration = get_voice_integration()
+            if not self.voice_integration:
+                print("语音集成未启用或未正确配置")
         except Exception as e:
             print(f"语音集成初始化失败: {e}")
             self.voice_integration = None
