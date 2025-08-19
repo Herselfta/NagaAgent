@@ -4,6 +4,7 @@
     "version": "3.0",                    // 系统版本号
     "voice_enabled": true,               // 是否启用语音功能
     "stream_mode": true,                 // 是否启用流式输出
+  "save_prompts": false,               // 是否将提示词与工具调用上下文写入日志
     "debug": false,                      // 是否启用调试模式
     "log_level": "WARNING"               // 日志级别：DEBUG/INFO/WARNING/ERROR
   },
@@ -56,14 +57,14 @@
 
   // 语音合成(TTS)配置
   "tts": {
-    "TTS_CHOICE": "GPT-SoVITS",            // 选择 TTS 系统: GPT-SoVITS, AZURE, DISABLE
-    "GPT-SoVITS": {
+    "TTS_CHOICE": "GPT_SoVITS",            // 选择 TTS 系统: GPT_SoVITS, AZURE, DISABLE
+    "GPT_SoVITS": {
         "is_enabled": true,                 // 是否启用 GPT-SoVITS
         "gpt_sovits_api_url": "http://127.0.0.1:9880/tts",  // GPT-SoVITS API URL
-        "ref_audio_path": "path/to/your/reference.mp3",      // 主参考音频路径
-        "prompt_text": "参考音频的提示文本",                   // 参考音频的提示文本
-        "text_lang": "zh",                                   // 合成文本语言
-        "prompt_lang": "zh",                                 // 提示文本语言
+        "gpt_sovits_refer_wav_path": "path/to/your/reference.wav",      // 主参考音频路径
+        "gpt_sovits_prompt_text": "参考音频的提示文本",                   // 参考音频的提示文本
+        "gpt_sovits_text_language": "zh",                                   // 合成文本语言
+        "gpt_sovits_prompt_language": "zh",                                 // 提示文本语言
         "top_k": 5,                                         // top_k 参数
         "top_p": 1.0,                                       // top_p 参数
         "temperature": 1.0,                                 // 温度参数
@@ -71,8 +72,8 @@
         "batch_size": 10,                                   // 批处理大小
         "speed_factor": 1.0,                                // 语速因子
         "aux_ref_audio_paths": [                            // 辅助参考音频路径列表
-            "path/to/your/aux_reference1.mp3",
-            "path/to/your/aux_reference2.mp3"
+            "path/to/your/aux_reference1.wav",
+            "path/to/your/aux_reference2.wav"
         ]
     },
     "api_key": "your_api_key_here",          // API密钥（如果需要）

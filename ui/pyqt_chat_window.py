@@ -67,12 +67,23 @@ class TitleBar(QWidget):
             qp.drawText(rect.translated(dx,dy), Qt.AlignCenter, s.text)
         qp.setPen(QColor(255,255,255))
         qp.drawText(rect, Qt.AlignCenter, s.text)
-    def resizeEvent(s,e):
-        x=s.width()-MAC_BTN_MARGIN
-        for i,btn in enumerate([s.btn_min,s.btn_close]):btn.move(x-MAC_BTN_SIZE*(2-i)-MAC_BTN_GAP*(1-i),36)
+
+    def resizeEvent(s, e):
+        """
+        Ensure the mac-style control buttons stay at the right top when the titlebar resizes.
+        """
+        try:
+            x = s.width() - MAC_BTN_MARGIN
+            for i, btn in enumerate([s.btn_min, s.btn_close]):
+                btn.move(x - MAC_BTN_SIZE*(2-i) - MAC_BTN_GAP*(1-i), 36)
+        except Exception:
+            # safe-fail if buttons not yet created
+            pass
 
 class AnimatedSideWidget(QWidget):
-    """自定义侧栏Widget，支持动画发光效果"""
+    """
+    自定义侧栏Widget，支持动画发光效果
+    """
     
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -82,19 +93,70 @@ class AnimatedSideWidget(QWidget):
         self.is_glowing = False
         
     def set_background_alpha(self, alpha):
-        """设置背景透明度"""
+        """
+        设置背景透明度
+        """
         self.bg_alpha = alpha
         self.update()
         
     def set_border_alpha(self, alpha):
-        """设置边框透明度"""
+        """
+        设置边框透明度
+        """
         self.border_alpha = alpha
         self.update()
         
     def set_glow_intensity(self, intensity):
-        """设置发光强度 0-20"""
+        """
+        设置发光强度 0-20
+        """
         self.glow_intensity = max(0, min(20, intensity))
         self.update()
+        
+    def start_glow_animation(self):
+        """
+        开始发光动画
+        """
+        self.is_glowing = True
+        self.update()
+        
+    def stop_glow_animation(self):
+        """
+        停止发光动画
+        """
+        self.is_glowing = False
+        self.glow_intensity = 0
+        self.update()
+        
+    def paintEvent(self, event):
+        """
+        自定义绘制方法
+        """
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        rect = self.rect()
+        
+        # 绘制发光效果（如果有）
+        if self.glow_intensity > 0:
+            glow_rect = rect.adjusted(-2, -2, 2, 2)
+            glow_color = QColor(100, 200, 255, self.glow_intensity)
+            painter.setPen(QPen(glow_color, 2))
+            painter.setBrush(QBrush(Qt.NoBrush))
+            painter.drawRoundedRect(glow_rect, 17, 17)
+        
+        # 绘制主要背景
+        bg_color = QColor(17, 17, 17, self.bg_alpha)
+        painter.setBrush(QBrush(bg_color))
+        
+        # 绘制边框
+        border_color = QColor(255, 255, 255, self.border_alpha)
+        painter.setPen(QPen(border_color, 1))
+        
+        # 绘制圆角矩形
+        painter.drawRoundedRect(rect, 15, 15)
+        
+        super().paintEvent(event)
         
     def start_glow_animation(self):
         """开始发光动画"""
@@ -435,8 +497,6 @@ class ChatWindow(QWidget):
 
     def adjust_input_height(s):
         doc = s.input.document()
-        h = int(doc.size().height())+10
-        s.input.setFixedHeight(min(max(60, h), 150))  # 增加最小高度，与字体大小匹配
         s.input_wrap.setFixedHeight(s.input.height())
         
     def eventFilter(s, obj, event):
@@ -480,27 +540,27 @@ class ChatWindow(QWidget):
             updated_html = '\n'.join(lines)
             s.text.setHtml(updated_html)
             
-            # 滚动到底部
-            s.text.verticalScrollBar().setValue(s.text.verticalScrollBar().maximum())
+        # 滚动到底部
+        s.text.verticalScrollBar().setValue(s.text.verticalScrollBar().maximum())
     def on_send(s):
         u = s.input.toPlainText().strip()
         if u:
             s.add_user_message(USER_NAME, u)
             s.input.clear()
-            
+
             # 如果已有任务在运行，先取消
             if s.worker and s.worker.isRunning():
                 s.cancel_current_task()
                 return
-            
+
             # 清空当前响应缓冲
             s.current_response = ""
-            
+
             # 确保worker被清理
             if s.worker:
                 s.worker.deleteLater()
                 s.worker = None
-            
+
             # 根据模式选择Worker类型，创建全新实例
             if s.streaming_mode:
                 s.worker = StreamingWorker(s.naga, u)
@@ -508,10 +568,10 @@ class ChatWindow(QWidget):
             else:
                 s.worker = BatchWorker(s.naga, u)
                 s.setup_batch_worker()
-            
+
             # 启动进度显示 - 恢复原来的调用方式
             s.progress_widget.set_thinking_mode()
-            
+
             # 启动Worker
             s.worker.start()
     
@@ -1067,32 +1127,75 @@ class ChatWindow(QWidget):
             graph_file = "logs/knowledge_graph/graph.html"
             quintuples_file = "logs/knowledge_graph/quintuples.json"
             
-            # 如果HTML文件不存在，尝试生成
-            if not os.path.exists(graph_file):
+            print("[MindMap] 用户点击了心智云图按钮")
+            print(f"[MindMap] 检查文件: graph={os.path.abspath(graph_file)}, quintuples={os.path.abspath(quintuples_file)}")
+
+            # 判断是否需要重新生成（HTML不存在或数据更新比HTML新）
+            def _needs_regen(html_path, data_path):
+                try:
+                    if not os.path.exists(html_path):
+                        return True
+                    if not os.path.exists(data_path):
+                        return False
+                    return os.path.getmtime(data_path) > os.path.getmtime(html_path)
+                except Exception:
+                    return False
+
+            if _needs_regen(graph_file, quintuples_file):
                 if os.path.exists(quintuples_file):
                     # 有五元组数据，生成HTML
                     s.add_user_message("系统", "🔄 正在生成心智云图...")
                     try:
+                        print("[MindMap] 检测到五元组数据，开始生成HTML...")
                         from summer_memory.quintuple_visualize_v2 import visualize_quintuples
                         visualize_quintuples()
                         if os.path.exists(graph_file):
                             import webbrowser
-                            webbrowser.open(graph_file)
+                            # use absolute file:// URI so browser can open regardless of current working directory
+                            try:
+                                print("[MindMap] 生成完成，尝试打开浏览器...")
+                                webbrowser.open(Path(graph_file).resolve().as_uri())
+                            except Exception:
+                                # fallback to original behavior
+                                print("[MindMap] 以绝对URI打开失败，尝试直接路径打开...")
+                                webbrowser.open(graph_file)
                             s.add_user_message("系统", "🧠 心智云图已生成并打开")
+                            print("[MindMap] 心智云图已生成并打开")
                         else:
                             s.add_user_message("系统", "❌ 心智云图生成失败")
+                            print("[MindMap] 心智云图生成失败：未找到graph.html")
                     except Exception as e:
                         s.add_user_message("系统", f"❌ 生成心智云图失败: {str(e)}")
+                        print(f"[MindMap] 生成异常: {type(e).__name__}: {e}")
                 else:
                     # 没有五元组数据，提示用户
                     s.add_user_message("系统", "❌ 未找到五元组数据，请先进行对话以生成知识图谱")
+                    print("[MindMap] 未找到五元组数据，无法生成")
             else:
                 # HTML文件存在，直接打开
                 import webbrowser
-                webbrowser.open(graph_file)
+                # open using absolute file:// URI to avoid issues when browser cwd != project root
+                try:
+                    print("[MindMap] 检测到现有HTML，尝试打开浏览器...")
+                    webbrowser.open(Path(graph_file).resolve().as_uri())
+                except Exception:
+                    webbrowser.open(graph_file)
                 s.add_user_message("系统", "🧠 心智云图已打开")
+                print("[MindMap] 心智云图已打开")
         except Exception as e:
             s.add_user_message("系统", f"❌ 打开心智云图失败: {str(e)}")
+            print(f"[MindMap] 打开失败: {type(e).__name__}: {e}")
+
+    def closeEvent(s, event):
+        """窗口关闭时确保清理语音临时资源"""
+        try:
+            from voice.voice_integration import get_voice_integration
+            vi = get_voice_integration()
+            if vi:
+                vi.shutdown()
+        except Exception as e:
+            print(f"[VoiceCleanup] 关闭时清理失败: {e}")
+        super().closeEvent(event)
 
 if __name__=="__main__":
     app = QApplication(sys.argv)

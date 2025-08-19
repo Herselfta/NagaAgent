@@ -124,7 +124,9 @@ def visualize_quintuples():
 
         try:
             print("尝试打开浏览器...")
-            webbrowser.open(html_file)
+            # ensure absolute file:// URI so browser can open the file regardless of cwd
+            from pathlib import Path
+            webbrowser.open(Path(html_file).resolve().as_uri())
             print("浏览器打开成功！")
         except Exception as e:
             print(f"无法自动打开浏览器：{e}")

@@ -12,15 +12,31 @@ from typing import List, Dict, Any
 
 logger = logging.getLogger("ToolCallUtils")
 
+def _preclean_text_for_json(text: str) -> str:
+    """预清洗LLM输出，去除代码块围栏，规范全角标点为半角，兼容Gemini风格。"""
+    if not text:
+        return text
+    # 去除markdown代码围栏 ``` ```json 等
+    text = re.sub(r"```[a-zA-Z]*\n?([\s\S]*?)```", r"\1", text)
+    # 统一全角大括号/中括号/冒号/逗号/引号
+    trans = str.maketrans({
+        '｛': '{', '｝': '}', '［': '[', '］': ']',
+        '：': ':', '，': ',', '“': '"', '”': '"', '‘': '"', '’': '"'
+    })
+    text = text.translate(trans)
+    # 移除BOM和不可见字符
+    text = text.replace('\uFEFF', '')
+    return text
+
 def parse_tool_calls(content: str) -> list:
-    """解析JSON格式工具调用，支持MCP和Agent两种类型"""
+    """解析JSON格式工具调用，支持MCP和Agent两种类型，兼容Gemini输出。"""
     tool_calls = []
+    content = _preclean_text_for_json(content)
     # 支持中英文括号的正则表达式
-    pattern = r'[｛{]([\s\S]*?)[｝}]'
+    pattern = r'[\{]([\s\S]*?)[\}]'
     matches = re.finditer(pattern, content)
     for match in matches:
         try:
-            # 将中文括号替换为英文括号
             json_content = "{" + match.group(1).strip() + "}"
             
             # 处理尾随逗号问题

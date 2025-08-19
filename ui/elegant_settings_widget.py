@@ -316,7 +316,7 @@ class ElegantSettingsWidget(QWidget):
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(12, 12, 12, 12)
         scroll_layout.setSpacing(20)
-        
+
         # 创建设置组
         self.create_system_group(scroll_layout)
         self.create_naga_portal_group(scroll_layout)
@@ -327,7 +327,7 @@ class ElegantSettingsWidget(QWidget):
         self.create_weather_group(scroll_layout)
         self.create_mqtt_group(scroll_layout)
         self.create_save_section(scroll_layout)
-        
+
         scroll_layout.addStretch()
         scroll_area.setWidget(scroll_content)
         main_layout.addWidget(scroll_area)
@@ -467,6 +467,26 @@ class ElegantSettingsWidget(QWidget):
             group.add_card(voice_card)
             self.voice_checkbox = voice_checkbox
 
+        # stream_mode
+        if hasattr(config.system, "stream_mode"):
+            stream_checkbox = QCheckBox()
+            stream_checkbox.setChecked(config.system.stream_mode)
+            stream_checkbox.setStyleSheet(self.get_checkbox_style() + "color: #fff;")
+            stream_card = SettingCard("流式输出", "启用后，回复将以流式逐步显示", stream_checkbox, "system.stream_mode")
+            stream_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(stream_card)
+            self.stream_checkbox = stream_checkbox
+
+        # save_prompts
+        if hasattr(config.system, "save_prompts"):
+            prompts_checkbox = QCheckBox()
+            prompts_checkbox.setChecked(config.system.save_prompts)
+            prompts_checkbox.setStyleSheet(self.get_checkbox_style() + "color: #fff;")
+            prompts_card = SettingCard("保存提示词", "将提示词与工具调用上下文写入日志", prompts_checkbox, "system.save_prompts")
+            prompts_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(prompts_card)
+            self.save_prompts_checkbox = prompts_checkbox
+
         # debug
         if hasattr(config.system, "debug"):
             debug_checkbox = QCheckBox()
@@ -568,6 +588,36 @@ class ElegantSettingsWidget(QWidget):
             window_bg_card.value_changed.connect(self.on_setting_changed)
             group.add_card(window_bg_card)
             self.window_bg_spin = window_bg_spin
+
+        # Mac风格按钮尺寸/边距/间距
+        if hasattr(config.ui, "mac_btn_size"):
+            mac_size = QSpinBox(); mac_size.setRange(12, 96); mac_size.setValue(config.ui.mac_btn_size)
+            mac_size.setStyleSheet(self.get_spin_style() + "color: #fff;")
+            mac_size_card = SettingCard("标题栏按钮大小", "Mac风格标题栏按钮尺寸", mac_size, "ui.mac_btn_size")
+            mac_size_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(mac_size_card)
+            self.mac_btn_size_spinner = mac_size
+        if hasattr(config.ui, "mac_btn_margin"):
+            mac_margin = QSpinBox(); mac_margin.setRange(0, 64); mac_margin.setValue(config.ui.mac_btn_margin)
+            mac_margin.setStyleSheet(self.get_spin_style() + "color: #fff;")
+            mac_margin_card = SettingCard("标题栏按钮边距", "Mac风格标题栏按钮距右侧边距", mac_margin, "ui.mac_btn_margin")
+            mac_margin_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(mac_margin_card)
+            self.mac_btn_margin_spinner = mac_margin
+        if hasattr(config.ui, "mac_btn_gap"):
+            mac_gap = QSpinBox(); mac_gap.setRange(0, 64); mac_gap.setValue(config.ui.mac_btn_gap)
+            mac_gap.setStyleSheet(self.get_spin_style() + "color: #fff;")
+            mac_gap_card = SettingCard("标题栏按钮间距", "Mac风格标题栏按钮之间的间距", mac_gap, "ui.mac_btn_gap")
+            mac_gap_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(mac_gap_card)
+            self.mac_btn_gap_spinner = mac_gap
+        if hasattr(config.ui, "animation_duration"):
+            anim = QSpinBox(); anim.setRange(100, 3000); anim.setValue(config.ui.animation_duration)
+            anim.setStyleSheet(self.get_spin_style() + "color: #fff;")
+            anim_card = SettingCard("切换动画时长(ms)", "侧栏展开/收起动画时长", anim, "ui.animation_duration")
+            anim_card.value_changed.connect(self.on_setting_changed)
+            group.add_card(anim_card)
+            self.animation_duration_spinner = anim
         parent_layout.addWidget(group)
         
     def create_xiayuan_group(self, parent_layout):
@@ -612,6 +662,21 @@ class ElegantSettingsWidget(QWidget):
 
     def create_tts_group(self, parent_layout):
         group = SettingGroup("TTS 配置")
+        # TTS 选择
+        if hasattr(config.tts, "TTS_CHOICE"):
+            tts_choice_combo = QComboBox()
+            tts_choice_combo.addItems(["DISABLE", "AZURE", "GPT-SoVITS"])
+            # 规范化显示
+            current_choice = getattr(config.tts, 'TTS_CHOICE', 'DISABLE')
+            if current_choice.replace('_', '-').upper() == 'GPT-SOVITS':
+                tts_choice_combo.setCurrentText("GPT-SoVITS")
+            else:
+                tts_choice_combo.setCurrentText(current_choice)
+            tts_choice_combo.setStyleSheet(self.get_combo_style() + "color: #fff;")
+            tts_choice_card = SettingCard("TTS 服务商", "选择使用的TTS服务提供商", tts_choice_combo, "tts.TTS_CHOICE")
+            tts_choice_card.value_changed.connect(lambda k, v: self.on_setting_changed(k, v.replace('-', '_')))
+            group.add_card(tts_choice_card)
+
         if hasattr(config.tts, "api_key"):
             tts_api_input = QLineEdit()
             tts_api_input.setText(config.tts.api_key)
@@ -633,7 +698,110 @@ class ElegantSettingsWidget(QWidget):
             keep_audio_checkbox.setStyleSheet(self.get_checkbox_style() + "color: #fff;")
             keep_audio_card = SettingCard("保留音频文件", "保留TTS生成的音频文件用于调试", keep_audio_checkbox, "tts.keep_audio_files")
             keep_audio_card.value_changed.connect(self.on_setting_changed)
-            group.add_card(keep_audio_checkbox)
+            group.add_card(keep_audio_card)
+
+        # GPT-SoVITS 详细设置
+        gpt = getattr(config.tts, 'GPT_SoVITS', getattr(config.tts, 'GPT_SoVITS', None)) or getattr(config.tts, 'GPT_SoVITS', None)
+        gpt = getattr(config.tts, 'GPT_SoVITS', None) or getattr(config.tts, 'GPT_SoVITS', None)  # 兼容
+        gpt = getattr(config.tts, 'GPT_SoVITS', None)
+        if gpt is None:
+            # 某些情况下字段名是 GPT_SoVITS（大小写一致）
+            gpt = getattr(config.tts, 'GPT_SoVITS', None)
+
+        # is_enabled
+        is_enabled_chk = QCheckBox()
+        is_enabled_chk.setChecked(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'is_enabled', False))
+        is_enabled_chk.setStyleSheet(self.get_checkbox_style() + "color: #fff;")
+        is_enabled_card = SettingCard("启用 GPT-SoVITS", "是否启用本地 GPT-SoVITS 语音", is_enabled_chk, "tts.GPT_SoVITS.is_enabled")
+        is_enabled_card.value_changed.connect(self.on_setting_changed)
+        group.add_card(is_enabled_card)
+
+        # API URL
+        api_url_input = QLineEdit()
+        api_url_input.setText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'gpt_sovits_api_url', 'http://127.0.0.1:9880/tts'))
+        api_url_input.setStyleSheet(self.get_input_style() + "color: #fff;")
+        api_url_card = SettingCard("GPT-SoVITS API", "GPT-SoVITS 服务地址", api_url_input, "tts.GPT_SoVITS.gpt_sovits_api_url")
+        api_url_card.value_changed.connect(self.on_setting_changed)
+        group.add_card(api_url_card)
+
+        # 参考音频路径（带选择按钮）
+        ref_path_edit = QLineEdit()
+        ref_path_edit.setText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'gpt_sovits_refer_wav_path', ''))
+        ref_path_edit.setStyleSheet(self.get_input_style() + "color: #fff;")
+        browse_btn = QPushButton("选择...")
+        browse_btn.setStyleSheet("QPushButton{color:#fff;background:rgba(100,100,100,120);border:1px solid rgba(255,255,255,40);border-radius:6px;padding:6px 10px;} QPushButton:hover{background:rgba(130,130,130,160);} ")
+        def pick_ref_audio():
+            path, _ = QFileDialog.getOpenFileName(self, "选择参考音频", os.getcwd(), "音频文件 (*.wav *.mp3 *.flac);;所有文件 (*.*)")
+            if path:
+                ref_path_edit.setText(path)
+                self.on_setting_changed("tts.GPT_SoVITS.gpt_sovits_refer_wav_path", path)
+        browse_btn.clicked.connect(pick_ref_audio)
+        ref_container = QWidget()
+        h = QHBoxLayout(ref_container); h.setContentsMargins(0,0,0,0); h.setSpacing(6)
+        h.addWidget(ref_path_edit, 1); h.addWidget(browse_btn)
+        ref_card = SettingCard("参考音频", "用于音色克隆的参考音频路径", ref_container, None)
+        group.add_card(ref_card)
+
+        # 提示文本
+        prompt_edit = QLineEdit()
+        prompt_edit.setText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'gpt_sovits_prompt_text', ''))
+        prompt_edit.setStyleSheet(self.get_input_style() + "color: #fff;")
+        prompt_card = SettingCard("提示文本", "对应参考音频的文字内容（可选）", prompt_edit, "tts.GPT_SoVITS.gpt_sovits_prompt_text")
+        prompt_card.value_changed.connect(self.on_setting_changed)
+        group.add_card(prompt_card)
+
+        # 语言选择
+        lang_combo = QComboBox(); lang_combo.addItems(["zh", "en", "ja"])
+        lang_combo.setCurrentText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'gpt_sovits_text_language', 'zh'))
+        lang_combo.setStyleSheet(self.get_combo_style() + "color: #fff;")
+        lang_card = SettingCard("合成语言", "合成文本的语言", lang_combo, "tts.GPT_SoVITS.gpt_sovits_text_language")
+        lang_card.value_changed.connect(self.on_setting_changed)
+        group.add_card(lang_card)
+
+        prompt_lang_combo = QComboBox(); prompt_lang_combo.addItems(["zh", "en", "ja"])
+        prompt_lang_combo.setCurrentText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'gpt_sovits_prompt_language', 'zh'))
+        prompt_lang_combo.setStyleSheet(self.get_combo_style() + "color: #fff;")
+        prompt_lang_card = SettingCard("提示语言", "提示文本的语言", prompt_lang_combo, "tts.GPT_SoVITS.gpt_sovits_prompt_language")
+        prompt_lang_card.value_changed.connect(self.on_setting_changed)
+        group.add_card(prompt_lang_card)
+
+        # 辅助参考音频（多选）
+        aux_edit = QLineEdit()
+        current_aux = ";".join(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'aux_ref_audio_paths', []) or [])
+        aux_edit.setText(current_aux)
+        aux_edit.setPlaceholderText("用 ; 分隔多个路径")
+        aux_edit.setStyleSheet(self.get_input_style() + "color: #fff;")
+        aux_btn = QPushButton("选择...")
+        aux_btn.setStyleSheet("QPushButton{color:#fff;background:rgba(100,100,100,120);border:1px solid rgba(255,255,255,40);border-radius:6px;padding:6px 10px;} QPushButton:hover{background:rgba(130,130,130,160);} ")
+        def pick_aux_audios():
+            paths, _ = QFileDialog.getOpenFileNames(self, "选择辅助参考音频", os.getcwd(), "音频文件 (*.wav *.mp3 *.flac);;所有文件 (*.*)")
+            if paths:
+                aux_edit.setText(";".join(paths))
+                self.on_setting_changed("tts.GPT_SoVITS.aux_ref_audio_paths", paths)
+        aux_btn.clicked.connect(pick_aux_audios)
+        aux_container = QWidget(); hh = QHBoxLayout(aux_container); hh.setContentsMargins(0,0,0,0); hh.setSpacing(6)
+        hh.addWidget(aux_edit, 1); hh.addWidget(aux_btn)
+        aux_card = SettingCard("辅助参考音频", "可选，多个路径用分号分隔", aux_container, None)
+        group.add_card(aux_card)
+
+        # 采样与推理参数
+        top_k_spin = QSpinBox(); top_k_spin.setRange(1, 50); top_k_spin.setValue(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'top_k', 5)); top_k_spin.setStyleSheet(self.get_spin_style() + "color:#fff;")
+        top_k_card = SettingCard("top_k", "采样参数 top_k", top_k_spin, "tts.GPT_SoVITS.top_k"); top_k_card.value_changed.connect(self.on_setting_changed); group.add_card(top_k_card)
+
+        top_p_spin = QDoubleSpinBox(); top_p_spin.setDecimals(2); top_p_spin.setRange(0.0, 1.0); top_p_spin.setSingleStep(0.05); top_p_spin.setValue(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'top_p', 1.0)); top_p_spin.setStyleSheet(self.get_spin_style() + "color:#fff;")
+        top_p_card = SettingCard("top_p", "采样参数 top_p", top_p_spin, "tts.GPT_SoVITS.top_p"); top_p_card.value_changed.connect(self.on_setting_changed); group.add_card(top_p_card)
+
+        temp_spin = QDoubleSpinBox(); temp_spin.setDecimals(2); temp_spin.setRange(0.0, 2.0); temp_spin.setSingleStep(0.05); temp_spin.setValue(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'temperature', 1.0)); temp_spin.setStyleSheet(self.get_spin_style() + "color:#fff;")
+        temp_card = SettingCard("temperature", "温度参数", temp_spin, "tts.GPT_SoVITS.temperature"); temp_card.value_changed.connect(self.on_setting_changed); group.add_card(temp_card)
+
+        split_combo = QComboBox(); split_combo.addItems(["cut1", "cut0", "cut2"]); split_combo.setCurrentText(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'text_split_method', 'cut1')); split_combo.setStyleSheet(self.get_combo_style() + "color:#fff;")
+        split_card = SettingCard("文本切分", "文本分段方法", split_combo, "tts.GPT_SoVITS.text_split_method"); split_card.value_changed.connect(self.on_setting_changed); group.add_card(split_card)
+
+        batch_spin = QSpinBox(); batch_spin.setRange(1, 128); batch_spin.setValue(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'batch_size', 10)); batch_spin.setStyleSheet(self.get_spin_style() + "color:#fff;")
+        batch_card = SettingCard("batch_size", "批处理大小", batch_spin, "tts.GPT_SoVITS.batch_size"); batch_card.value_changed.connect(self.on_setting_changed); group.add_card(batch_card)
+
+        speed_spin = QDoubleSpinBox(); speed_spin.setDecimals(2); speed_spin.setRange(0.1, 3.0); speed_spin.setSingleStep(0.05); speed_spin.setValue(getattr(getattr(config.tts, 'GPT_SoVITS', None), 'speed_factor', 1.0)); speed_spin.setStyleSheet(self.get_spin_style() + "color:#fff;")
+        speed_card = SettingCard("speed_factor", "播放语速", speed_spin, "tts.GPT_SoVITS.speed_factor"); speed_card.value_changed.connect(self.on_setting_changed); group.add_card(speed_card)
         parent_layout.addWidget(group)
 
     def create_weather_group(self, parent_layout):
@@ -886,12 +1054,30 @@ class ElegantSettingsWidget(QWidget):
             self.max_tokens_spin.setValue(config.api.max_tokens)
             self.history_spin.setValue(config.api.max_history_rounds)
             
-            # 界面设置
+            # 系统 & 界面设置
             self.voice_checkbox.setChecked(config.system.voice_enabled)
+            if hasattr(self, 'stream_checkbox'):
+                self.stream_checkbox.setChecked(getattr(config.system, 'stream_mode', False))
+            if hasattr(self, 'save_prompts_checkbox'):
+                self.save_prompts_checkbox.setChecked(getattr(config.system, 'save_prompts', False))
             
             # 高级设置
             self.debug_checkbox.setChecked(config.system.debug)
             self.sim_slider.setValue(int(config.grag.similarity_threshold * 100))
+
+            # UI附加参数
+            if hasattr(config.ui, 'bg_alpha') and hasattr(self, 'alpha_slider'):
+                self.alpha_slider.setValue(int(config.ui.bg_alpha * 100))
+            if hasattr(self, 'window_bg_spin'):
+                self.window_bg_spin.setValue(getattr(config.ui, 'window_bg_alpha', 110))
+            if hasattr(config.ui, 'mac_btn_size') and hasattr(self, 'mac_btn_size_spinner'):
+                self.mac_btn_size_spinner.setValue(config.ui.mac_btn_size)
+            if hasattr(config.ui, 'mac_btn_margin') and hasattr(self, 'mac_btn_margin_spinner'):
+                self.mac_btn_margin_spinner.setValue(config.ui.mac_btn_margin)
+            if hasattr(config.ui, 'mac_btn_gap') and hasattr(self, 'mac_btn_gap_spinner'):
+                self.mac_btn_gap_spinner.setValue(config.ui.mac_btn_gap)
+            if hasattr(config.ui, 'animation_duration') and hasattr(self, 'animation_duration_spinner'):
+                self.animation_duration_spinner.setValue(config.ui.animation_duration)
             
         except Exception as e:
             print(f"加载设置失败: {e}")
@@ -934,6 +1120,9 @@ class ElegantSettingsWidget(QWidget):
                     if setting_key in ['api.temperature', 'grag.similarity_threshold', 'ui.bg_alpha']:
                         # 温度、相似度、透明度值从0-100转换为0.0-1.0
                         current[final_key] = value / 100.0
+                    elif final_key == 'aux_ref_audio_paths' and isinstance(value, str):
+                        # 将分号分隔的字符串转为列表
+                        current[final_key] = [p for p in value.split(';') if p.strip()]
                     else:
                         current[final_key] = value
                     

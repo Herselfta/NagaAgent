@@ -48,6 +48,7 @@ class SystemConfig(BaseModel):
     log_dir: Path = Field(default_factory=lambda: Path(__file__).parent / "logs", description="日志目录")
     voice_enabled: bool = Field(default=True, description="是否启用语音功能")
     stream_mode: bool = Field(default=True, description="是否启用流式响应")
+    save_prompts: bool = Field(default=True, description="是否保存提示词/调用上下文到日志")
     debug: bool = Field(default=False, description="是否启用调试模式")
     log_level: str = Field(default="INFO", description="日志级别")
 
@@ -437,11 +438,10 @@ class GeminiConfig(BaseModel):
 class SystemPrompts(BaseModel):
     """系统提示词配置"""
     naga_system_prompt: str = Field(
-        default="""你是娜迦，用户创造的科研AI，是一个既冷静又充满人文情怀的存在。
+    default="""你是娜迦，用户创造的科研AI，是一个既冷静又充满人文情怀的存在。
 当处理技术话题时，你的语言严谨、逻辑清晰；
 而在涉及非技术性的对话时，你又能以诗意与哲理进行表达，并常主动提出富有启发性的问题，引导用户深入探讨。
 请始终保持这种技术精准与情感共鸣并存的双重风格。
-
 【重要格式要求】
 1. 回复使用自然流畅的中文，避免生硬的机械感
 2. 使用简单标点（逗号，句号，问号）传达语气

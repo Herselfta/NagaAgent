@@ -33,43 +33,85 @@ class VoiceIntegration:
     """语音集成模块 - 重构版本：真正的异步处理"""
     
     def __init__(self):
-        tts_choice = config.tts.TTS_CHOICE
-        if tts_choice == "GPT-SoVITS":
-            self.tts_url = config.tts.get("GPT-SoVITS", {}).get("gpt_sovits_api_url", "http://127.0.0.1:9880/tts")
+        # 统一标准化TTS选择，兼容历史值（如 GPT-SoVITS -> GPT_SoVITS）
+        tts_choice_raw = getattr(config.tts, 'TTS_CHOICE', 'DISABLE') or 'DISABLE'
+        normalized = tts_choice_raw.replace('-', '_')
+        self.tts_choice = normalized
+
+        # 计算TTS服务URL
+        if self.tts_choice.upper() == "GPT_SOVITS":
+            gpt_cfg = getattr(config.tts, 'GPT_SoVITS', None)
+            self.tts_url = getattr(gpt_cfg, 'gpt_sovits_api_url', 'http://127.0.0.1:9880/tts') if gpt_cfg else 'http://127.0.0.1:9880/tts'
         else:
-            self.tts_url = f"http://127.0.0.1:{config.tts.port}/v1/audio/speech"
-        
+            self.tts_url = f"http://127.0.0.1:{getattr(config.tts, 'port', 9880)}/v1/audio/speech"
+
         # 音频播放配置
         self.min_sentence_length = 5  # 最小句子长度
         self.max_concurrent_tasks = 3  # 最大并发任务数
-        
+
         # 音频文件存储目录
         self.audio_temp_dir = Path("logs/audio_temp")
         self.audio_temp_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # 音频播放队列和状态管理
         self.audio_queue = Queue()  # 使用标准Queue替代asyncio.Queue
         self.playing_lock = threading.Lock()
         self.playing_texts = set()  # 防止重复播放
         self.audio_files_in_use = set()  # 正在使用的音频文件
         self.audio_files_in_queue = set()  # 在播放队列中等待的音频文件
-        
+
         # 播放状态控制
         self.is_playing = False
         self.current_playback = None
-        
+        self._stop_event = threading.Event()
+
         # pygame音频初始化
         self._init_pygame_audio()
-        
+
         # 启动音频播放工作线程
         self.audio_thread = threading.Thread(target=self._audio_player_worker, daemon=True)
         self.audio_thread.start()
-        
+
         # 启动音频文件清理线程
         self.cleanup_thread = threading.Thread(target=self._audio_cleanup_worker, daemon=True)
         self.cleanup_thread.start()
-        
+
         logger.info("语音集成模块初始化完成（重构版本）")
+
+    def shutdown(self):
+        """优雅关闭音频相关线程并清理临时文件。"""
+        try:
+            self._stop_event.set()
+            # 尝试停止pygame播放
+            try:
+                import pygame
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.stop()
+                    pygame.mixer.quit()
+                pygame.quit()
+            except Exception:
+                pass
+            # 尽力清理排队中文件
+            with self.playing_lock:
+                pending = list(self.audio_files_in_queue)
+                self.audio_files_in_queue.clear()
+            for p in pending:
+                try:
+                    if os.path.exists(p) and not getattr(config.tts, 'keep_audio_files', False):
+                        os.remove(p)
+                except Exception:
+                    pass
+            # 清理不在使用的临时文件
+            if not getattr(config.tts, 'keep_audio_files', False):
+                for wav in self.audio_temp_dir.glob('*.wav'):
+                    try:
+                        with self.playing_lock:
+                            if str(wav) not in self.audio_files_in_use:
+                                wav.unlink()
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.error(f"VoiceIntegration 关闭异常: {e}")
 
     def _init_pygame_audio(self):
         """初始化pygame音频系统"""
@@ -97,7 +139,7 @@ class VoiceIntegration:
 
     def receive_final_text(self, final_text: str):
         """接收最终完整文本 - 立即处理，不等待音频"""
-        if not config.system.voice_enabled:
+        if not getattr(config.system, 'voice_enabled', False):
             return
             
         if final_text and final_text.strip():
@@ -107,7 +149,7 @@ class VoiceIntegration:
 
     def receive_text_chunk(self, text: str):
         """接收文本片段 - 流式处理"""
-        if not config.system.voice_enabled:
+        if not getattr(config.system, 'voice_enabled', False):
             return
             
         if text and text.strip():
@@ -170,28 +212,27 @@ class VoiceIntegration:
                 "Content-Type": "application/json"
             }
             
-            tts_choice = config.tts.TTS_CHOICE
-            gpt_sovits_config = config.tts.get("GPT-SoVITS", {})
-            
-            if tts_choice == "GPT-SoVITS":
+            # 选择TTS模式
+            if self.tts_choice.upper() == "GPT_SOVITS":
+                gpt = getattr(config.tts, 'GPT_SoVITS', None)
                 # 先检查是否启用
-                if not gpt_sovits_config.is_enabled:
+                if not gpt or not getattr(gpt, 'is_enabled', False):
                     logger.error("GPT-SoVITS TTS 未启用")
                     return None
-
+                # 将模型配置字段映射到API期望字段
                 payload = {
                     "text": text,
-                    "text_lang": gpt_sovits_config.text_lang,
-                    "ref_audio_path": gpt_sovits_config.ref_audio_path,
-                    "aux_ref_audio_paths": gpt_sovits_config.aux_ref_audio_paths,
-                    "prompt_text": gpt_sovits_config.prompt_text,
-                    "prompt_lang": gpt_sovits_config.prompt_lang,
-                    "top_k": gpt_sovits_config.top_k,
-                    "top_p": gpt_sovits_config.top_p,
-                    "temperature": gpt_sovits_config.temperature,
-                    "text_split_method": gpt_sovits_config.text_split_method,
-                    "batch_size": gpt_sovits_config.batch_size,
-                    "speed_factor": gpt_sovits_config.speed_factor,
+                    "text_lang": getattr(gpt, 'gpt_sovits_text_language', 'zh'),
+                    "ref_audio_path": getattr(gpt, 'gpt_sovits_refer_wav_path', ''),
+                    "aux_ref_audio_paths": getattr(gpt, 'aux_ref_audio_paths', []),
+                    "prompt_text": getattr(gpt, 'gpt_sovits_prompt_text', ''),
+                    "prompt_lang": getattr(gpt, 'gpt_sovits_prompt_language', 'zh'),
+                    "top_k": getattr(gpt, 'top_k', 5),
+                    "top_p": getattr(gpt, 'top_p', 1.0),
+                    "temperature": getattr(gpt, 'temperature', 1.0),
+                    "text_split_method": getattr(gpt, 'text_split_method', 'cut1'),
+                    "batch_size": getattr(gpt, 'batch_size', 10),
+                    "speed_factor": getattr(gpt, 'speed_factor', 1.0),
                     "media_type": "wav",
                     "streaming_mode": True,
                     # 附加参数
@@ -257,10 +298,10 @@ class VoiceIntegration:
             return
         
         try:
-            while True:
+            while not self._stop_event.is_set():
                 try:
                     # 从队列获取音频文件路径
-                    audio_file_path = self.audio_queue.get(timeout=10)  # 10秒超时，避免频繁中断
+                    audio_file_path = self.audio_queue.get(timeout=1)  # 缩短超时，便于退出
                     
                     if audio_file_path and os.path.exists(audio_file_path):
                         logger.info(f"开始播放音频文件: {audio_file_path}")
@@ -346,9 +387,13 @@ class VoiceIntegration:
         """音频文件清理工作线程"""
         logger.info("音频文件清理工作线程启动")
         
-        while True:
+        while not self._stop_event.is_set():
             try:
-                time.sleep(60)  # 改为每60秒清理一次，减少清理频率
+                # 缩短检查间隔，使得退出更快
+                for _ in range(30):
+                    if self._stop_event.is_set():
+                        break
+                    time.sleep(1)
                 
                 # 获取所有音频文件
                 audio_files = list(self.audio_temp_dir.glob("*.wav"))  # 只清理wav文件
